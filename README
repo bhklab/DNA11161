@@ -1,0 +1,35 @@
+1.  Compute pairwise correlation between Affy and illumine RNA-seq by
+ 
+(i) Selecting the best Affy probesets using jetset;
+(ii) Selecting the most correlated probesets;
+(iii) Use the isoform expression FPKMs and compare then with the most similar probesets
+ 
+    *   Test whether selecting the most correlated probeset per gene or the most correlated pair (probeset, transcript) is dramatically improving the correlation distribution
+    *   Plot, for each patient, the expression values as measured by Affy and RNA-Seq; this will help showing that the dynamic range of RNAseq is better than the one of microarray for low expression genes
+ 
+ 2.  For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
+ 
+ 3.  For the non-affy signatures, compute the score and classification using either the jetset or the most correlated probeset
+ 
+    *   Add the DCN, STROMA CD10, TOP2 INDEX to the pool of signatures;
+ 
+ 4.  Compute and plot correlation between signature scores; try to use the "MEAS" plot (see papers in attachment);
+ 
+ 5.  Check whether large gene signatures are always more correlated, do a random selection of genes of increasing size;
+ 
+ 6.  From the correlation distribution, classify the well and poorly correlated genes;
+ 
+ 
+7.  Find the reasons why some gene are poorly correlated. Start with some genes of interest (ESR1, ERBB2, PLAU, STAT1)
+    *   level of expression
+    *   alternative splicing, using bioMart or the website Christine mentioned
+http://www.as3d.org/human2006/
+ 
+    *   Mappability (Vincent)
+    *   association with gene lengths
+ 
+ 8.  Write the paper
+ 
+ 9.  Optional analyses: association of gene and isoform FPKMs with subtypes and survival -> not enough data
+ 
+ 10. Retrieve and analyze TCGA data

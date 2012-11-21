@@ -1,4 +1,5 @@
 1.  Compute pairwise correlation between Affy and illumine RNA-seq by
+1.  Compute pairwise correlation between Affy and illumina RNA-seq by
  
 (i) Selecting the best Affy probesets using jetset;
 (ii) Selecting the most correlated probesets;

@@ -1,26 +1,29 @@
+Analyis steps:
+---------------
+
+0. [BEN] Data normalization and formatting fort Affymetrix and RNA-Seq gene expressions
+
 1. [BEN] Compute pairwise correlation between Affy and illumina RNA-seq by
  
-(i) Selecting the best Affy probesets using jetset;
-(ii) Selecting the most correlated probesets;
-(iii) Use the isoform expression FPKMs and compare then with the most similar probesets
+(a) Selecting the best Affy probesets using jetset;
+(b) Selecting the most correlated probesets;
+(c) Use the isoform expression FPKMs and compare then with the most similar probesets
  
     *   Test whether selecting the most correlated probeset per gene or the most correlated pair (probeset, transcript) is dramatically improving the correlation distribution
     *   Plot, for each patient, the expression values as measured by Affy and RNA-Seq; this will help showing that the dynamic range of RNAseq is better than the one of microarray for low expression genes
+	*	From the correlation distribution, classify the well and poorly correlated genes
  
- 2. [BEN] For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
+ 2. [BEN] Compare breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data. For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
  
  3. [BEN] For the non-affy signatures, compute the score and classification using either the jetset or the most correlated probeset
  
     *   Add the DCN, STROMA CD10, TOP2 INDEX to the pool of signatures;
  
- 4. [NORMAN] Compute and plot correlation between signature scores; try to use the "MEAS" plot (see papers in attachment) ;
+ 4. [NORMAN] Compute and plot correlation between signature scores; try to use the "MEAS" plot;
  
  5. [NORMAN] Check whether large gene signatures are always more correlated, do a random selection of genes of increasing size;
  
- 6. [BEN] From the correlation distribution, classify the well and poorly correlated genes;
- 
- 
-7. [TEAM WORK] Find the reasons why some gene are poorly correlated. Start with some genes of interest (ESR1, ERBB2, PLAU, STAT1)
+6. [TEAM WORK] Find the reasons why some gene are poorly correlated. Start with some genes of interest (ESR1, ERBB2, PLAU, STAT1)
     *   level of expression [BEN]
     *   alternative splicing, using bioMart or the website Christine mentioned [DEBORA]
 http://www.as3d.org/human2006/
@@ -28,8 +31,10 @@ http://www.as3d.org/human2006/
     *   Mappability [VINCENT, ?]
     *   association with gene lengths using the genomcfeatures package [NORMAN]
  
- 8.  Write the paper
+ 7.  [DEBORA] Write the paper
  
+ 8. [NORMAN] Submit the Affymetrix data and clinical information to GEO; ask GEO folks if they want us to append the RNA-Seq FPKM as a supplementary file or if they prefer we create a new series for the RNA-Seq FPKM
+
  9.  Optional analyses: association of gene and isoform FPKMs with subtypes and survival -> not enough data
  
- 10. Retrieve and analyze TCGA data
+ 10. [NORMAN] Retrieve and analyze TCGA data

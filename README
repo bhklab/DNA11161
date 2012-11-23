@@ -11,7 +11,7 @@ Analyis steps:
  
     *   Test whether selecting the most correlated probeset per gene or the most correlated pair (probeset, transcript) is dramatically improving the correlation distribution
     *   Plot, for each patient, the expression values as measured by Affy and RNA-Seq; this will help showing that the dynamic range of RNAseq is better than the one of microarray for low expression genes
-	*	From the correlation distribution, classify the well and poorly correlated genes
+    *	From the correlation distribution, classify the well and poorly correlated genes
  
  2. [BEN] Compare breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data. For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
  

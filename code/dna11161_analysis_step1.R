@@ -186,9 +186,7 @@ for(i in 1:length(myfns)) {
   myfn <- file.path(saveres2, sprintf("cores_%s.RData", names(myfns)[i]))
   if(!file.exists(myfn)) {
   cores <- sapply(1:nc, function(x, y, z) {
-  	# ct <- cor.test(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs")
-  	# return(ct$estimate)
-  	return(cor(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs"))
+    if(sum(complete.cases(y[ ,x], z[ ,x])) > 3) { return(cor(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs")) } else { return(NA) }
   }, y=datac.affy, z=datac.rnaseq)
   names(cores) <- colnames(datac.affy)
   save(list=c("cores"), compress=TRUE, file=myfn)
@@ -205,9 +203,9 @@ for(i in 1:length(myfns)) {
   write.csv(tt, file=file.path(saveres2, sprintf("correlation_%s_allgenes.csv", names(myfns)[i])))
   
   ## same plot with mixture of 2 gaussians
-  rr <- mclust::Mclust(data=cores, G=2, modelNames="V")
+  rr <- mclust::Mclust(data=cores[!is.na(cores)], G=2, modelNames="V")
   ## cutoff
-  rrc <- (max(cores[rr$classification == 1]) + min(cores[rr$classification == 2]))/2
+  rrc <- (max(cores[!is.na(cores)][rr$classification == 1]) + min(cores[!is.na(cores)][rr$classification == 2]))/2
   xx1 <- seq(-1, 1, 0.01)
   yy1 <- dnorm(x=xx1, mean=rr$parameters$mean[1], sd=sqrt(rr$parameters$variance$sigmasq[1]))
   xx2 <- seq(-1, 1, 0.01)
@@ -229,5 +227,14 @@ for(i in 1:length(myfns)) {
   
   pdf(file.path(saveres2, sprintf("correlation_pairw_heatmap_%s_allgenes.pdf", names(myfns)[i])))
   hist(diag(corespairw), breaks=10, xlim=c(0.5,1), freq=FALSE, main=sprintf("Pairwise correlation using all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(diag(corespairw), probs=0.05, na.rm=TRUE), quantile(diag(corespairw), probs=0.25, na.rm=TRUE), quantile(diag(corespairw), probs=0.5, na.rm=TRUE), quantile(diag(corespairw), probs=0.75, na.rm=TRUE), quantile(diag(corespairw), probs=0.95, na.rm=TRUE)))
+  dev.off()
+  
+  ## scatterplot for each pair of samples
+  pdf(file.path(saveres2, sprintf("scatterplot_pairw_%s_allgenes.pdf", names(myfns)[i])))
+  for(j in 1:nrow(datac.affy)) {
+    cc <- cor(x=datac.affy[j, ], y=datac.rnaseq[j, ], method="spearman", use="complete.obs")
+    cci <- spearmanCI(cc, sum(complete.cases(datac.affy[j, ], datac.rnaseq[j, ])))
+    plot(x=datac.affy[j, ], y=datac.rnaseq[j, ], main=sprintf("%s, all genes [%s]\nAFFY vs ILLUMINA RNA-seq", rownames(datac.affy)[j], names(myfns)[i]), xlab="Gene expression (AFFY)", ylab="Gene expression (ILLUMINA RNA-seq)", sub=sprintf("Sperman correlation = %.2g [%.2g,%.2g], p=%.1E", cc, cci[1], cci[2], cci[3]), col="blue")
+  }
   dev.off()
 }

@@ -22,12 +22,24 @@ Analyis steps:
    -->> DONE
  
     *   Test whether selecting the most correlated probeset per gene or the most correlated pair (probeset, transcript) is dramatically improving the correlation distribution
+    -> the answer is NO.
+   -->> DONE
+   
     *   Plot, for each patient, the expression values as measured by Affy and RNA-Seq; this will help showing that the dynamic range of RNAseq is better than the one of microarray for low expression genes
+    -> jetset/correlation_jetset_allgenes.csv
+    -> bestpgene/correlation_bestpgene_allgenes.csv
+    -> bestptranscript/correlation_bestptranscript_allgenes.csv
+    -->> DONE
+    
     *	From the correlation distribution, classify the well and poorly correlated genes
+    -> jetset/scatterplot_pairw_jetset_allgenes.pdf
+    -> bestpgene/scatterplot_pairw_bestpgene_allgenes.pdf
+    -> bestptranscript/scatterplot_pairw_bestptranscript_allgenes.pdf
+    -->> DONE
  
  2. [BEN] Compare breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data. For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
  
- 3. [BEN] For the non-affy signatures, compute the score and classification using either the jetset or the most correlated probeset
+ 3. [BEN] For the non-affy signatures, compute the score and classification using either the jetset [or the most correlated probeset -> I would use jetset only as we showed it yields similar correlation, see step 1)
  
     *   Add the DCN, STROMA CD10, TOP2 INDEX to the pool of signatures;
  

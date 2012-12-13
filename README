@@ -1,13 +1,25 @@
 Analyis steps:
 ---------------
 
-0. [BEN] Data normalization and formatting fort Affymetrix and RNA-Seq gene expressions
+0. [BEN] Data normalization and formatting for Affymetrix and RNA-Seq gene expressions
+   -> saveres/dna11161_gene_rnaseq.RData: RNA-seq data at gene level
+   -> saveres/dna11161_transcript_rnaseq.RData: RNA-seq data at transcript level
+   -> saveres/dna11161_affy_frma.RData: affymetrix data
+   -->> DONE
 
 1. [BEN] Compute pairwise correlation between Affy and illumina RNA-seq by
  
-(a) Selecting the best Affy probesets using jetset;
+(a) Selecting the best Affy probesets using jetset vs RNA-seq at the gene level
+   -> saveres/dna11161_common_jetset.RData: maping using jetset
+   -->> DONE
+
 (b) Selecting the most correlated probesets;
+   -> saveres/dna11161_common_bestpgene.RData: mapping using the most correlated affy probeset with rnaseq at the gene level
+   -->> DONE
+
 (c) Use the isoform expression FPKMs and compare then with the most similar probesets
+   -> saveres/dna11161_common_bestptranscript.RData: mapping using the most correlated affy probeset with rnaseq at the transcript level
+   -->> DONE
  
     *   Test whether selecting the most correlated probeset per gene or the most correlated pair (probeset, transcript) is dramatically improving the correlation distribution
     *   Plot, for each patient, the expression values as measured by Affy and RNA-Seq; this will help showing that the dynamic range of RNAseq is better than the one of microarray for low expression genes

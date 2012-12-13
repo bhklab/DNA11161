@@ -6,9 +6,9 @@
 
 rm(list=ls(all=TRUE))
 
-source("ufoo.R")
+source(file.path("code", "ufoo.R"))
 
-saveres <- file.path("..", "saveres")
+saveres <- file.path("saveres")
 if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
 
 ########################
@@ -113,14 +113,21 @@ save(list=c("data.affy", "annot.affy", "sampleinfo.affy"), compress=TRUE, file=m
 } else { load(myfn) }
 
 
-## RNA-seq data
-myfn <- file.path(saveres, "dna11161_rnaseq.RData")
+## RNA-seq gene-centric and transcript data
+myfn <- file.path(saveres, "dna11161_gene_rnaseq.RData")
 if(!file.exists(myfn)) {
+  
 ## sample info
+message("Read sample info")
 sampleinfo <- read.csv(file.path("rnaseq" ,"DNA111061_dnavision_ids.csv"), row.names=NULL, stringsAsFactors=FALSE)
 rownames(sampleinfo) <- gsub("BIS", "", toupper(as.character(sampleinfo[ ,2])))
 sampleinfo <- data.frame("samplename"=rownames(sampleinfo), sampleinfo)
+
+
 ## alignment with tophat and expression estimation (FPKM) with cufflink
+
+## gene expressions
+message("Read gene expression values generated with RNA-seq")
 dd <- read.csv(file.path("rnaseq", "consolidated", "allFpkmGenesEnsembl.txt"), sep="\t", row.names=NULL, stringsAsFactors=FALSE)
 annott <- dd[ ,1:2]
 ddf <- dd[ , grep("Status", colnames(dd)), drop=FALSE]
@@ -133,36 +140,115 @@ data[dataf != "OK"] <- NA
 ## log2 transformation of the FPKM for better comparability with microarray
 data <- log2(data+1)
 nn <- gsub("[.]", "-", substr(colnames(dd), 1, nchar(colnames(dd)) - 5))
-#sampleinfo <- sampleinfo[sample(1:nrow(sampleinfo)), ]
+rownames(data) <- rownames(dataf) <- nn
+## rename objects
+data.gene <- data
+dataf.gene <- dataf
+annot.gene <- annott
+
+## transcript expressions
+message("Read transcript expression values generated with RNA-seq")
+dd <- read.csv(file.path("rnaseq", "consolidated", "allFpkmTranscriptsEnsembl.txt"), sep="\t", row.names=NULL, stringsAsFactors=FALSE)
+annott <- dd[ ,1:3]
+ddf <- dd[ , grep("Status", colnames(dd)), drop=FALSE]
+dd <- data.matrix(dd[ , grep("FPKM", colnames(dd)), drop=FALSE])
+rownames(dd) <- rownames(ddf) <- as.character(annott[ ,1])
+data <- t(dd)
+dataf <- t(ddf)
+## remove FPKMs of bad quality
+data[dataf != "OK"] <- NA
+## log2 transformation of the FPKM for better comparability with microarray
+data <- log2(data+1)
+nn <- gsub("[.]", "-", substr(colnames(dd), 1, nchar(colnames(dd)) - 5))
+rownames(data) <- rownames(dataf) <- nn
+## rename objects
+data.transcript <- data
+dataf.transcript <- dataf
+annot.transcript <- annott
+
+## keep only ensemble gene ids in common between FPKMs at the gene and transcript levels
+gn <- intersect(as.character(annot.gene[ ,"gene_id"]), as.character(annot.transcript[ ,"gene_id"]))
+gx <- is.element(as.character(annot.gene[ ,"gene_id"]), gn)
+data.gene <- data.gene[ , gx, drop=FALSE]
+dataf.gene <- dataf.gene[ , gx, drop=FALSE]
+annot.gene <- annot.gene[gx, , drop=FALSE]
+gx <- is.element(as.character(annot.transcript[ ,"gene_id"]), gn)
+data.transcript <- data.transcript[ , gx, drop=FALSE]
+dataf.transcript <- dataf.transcript[ , gx, drop=FALSE]
+annot.transcript <- annot.transcript[gx, , drop=FALSE]
+
+## keep the samples for which we have all data
+nn <- fold(intersect, sampleinfo[ ,"DNAvision.ID"], rownames(data,gene), rownames(data.transcript))
 sampleinfo <- sampleinfo[match(nn, sampleinfo[ ,"DNAvision.ID"]), , drop=FALSE]
-rownames(data) <- rownames(dataf) <- rownames(sampleinfo)
+data.gene <- data.gene[nn, , drop=FALSE]
+dataf.gene <- dataf.gene[nn, , drop=FALSE]
+data.transcript <- data.transcript[nn, , drop=FALSE]
+dataf.transcript <- dataf.transcript[nn, , drop=FALSE]
+rownames(data.gene) <- rownames(data.transcript) <- rownames(dataf.gene) <- rownames(dataf.transcript) <- rownames(sampleinfo)
+
 ## annotations
+message("Annotate genes and transcripts with biomart")
+
+## for genes
 library(biomaRt)
 ensembl.db <- useMart("ensembl", dataset="hsapiens_gene_ensembl")
-gid <- colnames(data)
-gene.an <- getBM(attributes=c("ensembl_gene_id", "entrezgene", "hgnc_symbol", "unigene", "description", "chromosome_name", "start_position", "end_position", "strand", "band"), filters="ensembl_gene_id", values=gid, mart=ensembl.db)
+gid <- colnames(data.gene)
+filt <- "ensembl_gene_id"
+gene.an <- getBM(attributes=c(filt, "entrezgene", "hgnc_symbol", "unigene", "description", "chromosome_name", "start_position", "end_position", "strand", "band"), filters=filt, values=gid, mart=ensembl.db)
 gene.an[gene.an == "" | gene.an == " "] <- NA
-gene.an <- gene.an[!is.na(gene.an[ , "ensembl_gene_id"]) & !duplicated(gene.an[ , "ensembl_gene_id"]), , drop=FALSE]
+gene.an <- gene.an[!is.na(gene.an[ , filt]) & !duplicated(gene.an[ , filt]), , drop=FALSE]
 annot <- data.frame(matrix(NA, nrow=length(gid), ncol=ncol(gene.an), dimnames=list(gid, colnames(gene.an))))
-annot[match(gene.an[ , "ensembl_gene_id"], gid), colnames(gene.an)] <- gene.an
-annot <- data.frame("probe"=rownames(annot), "EntrezGene.ID"=annot[ ,"entrezgene"], annot)
-## identify the best enesemble gene id for each entrez gene id
-gid1 <- as.character(annot[ ,"EntrezGene.ID"])
-names(gid1) <- rownames(annot)
+annot[match(gene.an[ , filt], gid), colnames(gene.an)] <- gene.an
+annot.gene  <- data.frame("probe"=rownames(annot), "EntrezGene.ID"=annot[ ,"entrezgene"], annot.gene, annot)
+rownames(annot.gene) <- colnames(data.gene)
+
+## identify the most variant enesemble gene id for each entrez gene id
+library(genefu)
+gid1 <- as.character(annot.gene[ ,"EntrezGene.ID"])
+names(gid1) <- rownames(annot.gene)
 gid2 <- sort(unique(gid1))
 names(gid2) <- paste("geneid", gid2, sep=".")
-rr <- geneid.map(geneid1=gid1, data1=data, geneid2=gid2)
-annot <- data.frame(annot, "best"=FALSE)
-annot[names(rr$geneid1), "best"] <- TRUE
+rr <- genefu::geneid.map(geneid1=gid1, data1=data.gene, geneid2=gid2)
+annot.gene <- data.frame(annot.gene, "best"=FALSE)
+annot.gene[names(rr$geneid1), "best"] <- TRUE
+
+## for transcripts
+gid <- colnames(data.transcript)
+filt <- "ensembl_transcript_id"
+gene.an <- getBM(attributes=c(filt, "ensembl_gene_id", "entrezgene", "hgnc_symbol", "unigene", "description", "chromosome_name", "start_position", "end_position", "strand", "band"), filters=filt, values=gid, mart=ensembl.db)
+gene.an[gene.an == "" | gene.an == " "] <- NA
+gene.an <- gene.an[!is.na(gene.an[ , filt]) & !duplicated(gene.an[ , filt]), , drop=FALSE]
+annot <- data.frame(matrix(NA, nrow=length(gid), ncol=ncol(gene.an), dimnames=list(gid, colnames(gene.an))))
+annot[match(gene.an[ , filt], gid), colnames(gene.an)] <- gene.an
+annot.transcript <- data.frame("probe"=rownames(annot), "EntrezGene.ID"=annot[ ,"entrezgene"], annot.transcript, annot)
+rownames(annot.transcript) <- colnames(data.transcript)
+
+## identify the most variant transcript id for each entrez gene id
+gid1 <- as.character(annot.transcript[ ,"EntrezGene.ID"])
+names(gid1) <- rownames(annot.transcript)
+gid2 <- sort(unique(gid1))
+names(gid2) <- paste("geneid", gid2, sep=".")
+rr <- genefu::geneid.map(geneid1=gid1, data1=data.transcript, geneid2=gid2)
+annot.transcript <- data.frame(annot.transcript, "best"=FALSE)
+annot.transcript[names(rr$geneid1), "best"] <- TRUE
+
+
 ## rename objects
-data.rnaseq <- data
-annot.rnaseq <- annot[colnames(data), ,drop=FALSE]
-sampleinfo.rnaseq <- sampleinfo[rownames(data), ,drop=FALSE]
+data.gene.rnaseq <- data.gene
+dataf.gene.rnaseq <- dataf.gene
+annot.gene.rnaseq <- annot.gene[colnames(data.gene), ,drop=FALSE]
+data.transcript.rnaseq <- data.transcript
+dataf.transcript.rnaseq <- dataf.transcript
+annot.transcript.rnaseq <- annot.transcript[colnames(data.transcript), ,drop=FALSE]
+sampleinfo.rnaseq <- sampleinfo
 rm(list=c("data", "annot", "sampleinfo", "dataf", "annott", "dd", "ddf"))
 gc()
-save(list=c("data.rnaseq", "annot.rnaseq", "sampleinfo.rnaseq"), compress=TRUE, file=myfn)
-} else { load(myfn) }
+## gene
+save(list=c("data.gene.rnaseq", "dataf.gene.rnaseq", "annot.gene.rnaseq", "sampleinfo.rnaseq"), compress=TRUE, file=myfn)
+## transcript
+save(list=c("data.transcript.rnaseq", "dataf.transcript.rnaseq", "annot.transcript.rnaseq", "sampleinfo.rnaseq"), compress=TRUE, file=file.path(saveres, "dna11161_transcript_rnaseq.RData"))
 
+} else { load(myfn) }
 
 ## clinical information
 dd <- read.csv(file.path("clinic_info", "DNA11161_clinical_info_201202.csv"), row.names=NULL, stringsAsFactors=FALSE)
@@ -173,6 +259,7 @@ demo <- data.frame(matrix(NA, nrow=length(nn), ncol=ncol(dd), dimnames=list(nn, 
 demo <- setcolclass.df(df=demo, colclass=sapply(dd, class), factor.levels=sapply(dd, levels))
 demo[rownames(dd), ] <- dd
 
-write.csv(demo, file=file.path(saveres, "DNA11161_demo.csv", saveres))
-save(list=c("demo"), compress=TRUE, file=file.path(saveres, "DNA11161_demo.RData", saveres))
+write.csv(demo, file=file.path(saveres, "DNA11161_demo.csv"))
+save(list=c("demo"), compress=TRUE, file=file.path(saveres, "DNA11161_demo.RData"))
+
 

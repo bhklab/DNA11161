@@ -6,9 +6,9 @@
 
 rm(list=ls(all=TRUE))
 
-source("ufoo.R")
+source(file.path("code", "ufoo.R"))
 
-saveres <- file.path("..", "saveres")
+saveres <- file.path("saveres")
 if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
 
 ########################
@@ -18,80 +18,216 @@ if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
 ########################
 ## retrict data to common tumors and genes
 ## step 1a: select best affy probeset using jetset
-myfn <- file.path(saveres, "dna11161_jetset_common.RData")
+myfn <- file.path(saveres, "dna11161_common_jetset.RData")
 if(!file.exists(myfn)) {
-## common tumors
-nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
-## common genes
-gid.affy <- annot.affy[ ,"EntrezGene.ID"]
-names(gid.affy) <- rownames(annot.affy)
-gid.rnaseq <- annot.rnaseq[ ,"EntrezGene.ID"]
-names(gid.rnaseq) <- rownames(annot.rnaseq)
-ng <- sort(unique(intersect(gid.affy[annot.affy[ ,"best"]], gid.rnaseq[annot.rnaseq[ ,"best"]])))
-datac.affy <- data.affy[nn, !is.na(gid.affy) & annot.affy[ ,"best"] & (gid.affy %in% ng)]
-colnames(datac.affy) <- paste("geneid", gid.affy[colnames(datac.affy)], sep=".")
-datac.rnaseq <- data.rnaseq[nn, !is.na(gid.rnaseq) & annot.rnaseq[ ,"best"] & (gid.rnaseq %in% ng)]
-annotc <- annot.rnaseq[colnames(datac.rnaseq), ,drop=FALSE]
-colnames(datac.rnaseq) <- rownames(annotc) <- paste("geneid", gid.rnaseq[colnames(datac.rnaseq)], sep=".")
-datac.rnaseq <- datac.rnaseq[ ,colnames(datac.affy),drop=FALSE]
-democ <- demo[nn, ,drop=FALSE]
-## remove genes with greater or equal than 50% of missing values in either datasets
-myx <- apply(datac.affy, 2, function(x, y) { return(sum(is.na(x)) < (length(x) * y)) }, y=0.5) & apply(datac.rnaseq, 2, function(x, y) { return(sum(is.na(x)) < (length(x) * y)) }, y=0.5)
-datac.affy <- datac.affy[ ,myx,drop=FALSE]
-datac.rnaseq <- datac.rnaseq[ ,myx,drop=FALSE]
-annotc <- annotc[myx, ,drop=FALSE]
-save(list=c("datac.rnaseq", "datac.affy", "annotc", "democ"), compress=TRUE, file=myfn)
+  message("Mapping using jetset")
+  ## load rnaseq gene data
+  load(file.path(saveres, "dna11161_gene_rnaseq.RData"))
+  ## load affy data
+  load(file.path(saveres, "dna11161_affy_frma.RData"))
+  ## common tumors
+  nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
+  sampleinfoc <- sampleinfo.affy[nn, , drop=FALSE]
+  ## common genes
+  gid.affy <- annot.affy[ ,"EntrezGene.ID"]
+  names(gid.affy) <- rownames(annot.affy)
+  gid.rnaseq <- annot.gene.rnaseq[ ,"EntrezGene.ID"]
+  names(gid.rnaseq) <- rownames(annot.gene.rnaseq)
+  ng <- sort(unique(intersect(gid.affy[annot.affy[ ,"best"]], gid.rnaseq[annot.gene.rnaseq[ ,"best"]])))
+  ## affy: selection with jetset
+  datac.affy <- data.affy[nn, !is.na(gid.affy) & annot.affy[ ,"best"] & (gid.affy %in% ng)]
+  colnames(datac.affy) <- paste("geneid", gid.affy[colnames(datac.affy)], sep=".")
+  ## rnaseq: selection of the most variant
+  datac.rnaseq <- data.gene.rnaseq[nn, !is.na(gid.rnaseq) & annot.gene.rnaseq[ ,"best"] & (gid.rnaseq %in% ng)]
+  annotc <- data.frame("probeset.affy"=colnames(datac.affy), annot.gene.rnaseq[colnames(datac.rnaseq), ,drop=FALSE])
+  colnames(datac.rnaseq) <- rownames(annotc) <- paste("geneid", gid.rnaseq[colnames(datac.rnaseq)], sep=".")
+  datac.rnaseq <- datac.rnaseq[ ,colnames(datac.affy),drop=FALSE]
+  ## remove genes with greater or equal than 50% of missing values in either datasets
+  myx <- apply(datac.affy, 2, function(x, y) { return(sum(is.na(x)) < (length(x) * y)) }, y=0.5) & apply(datac.rnaseq, 2, function(x, y) { return(sum(is.na(x)) < (length(x) * y)) }, y=0.5)
+  datac.affy <- datac.affy[ ,myx,drop=FALSE]
+  datac.rnaseq <- datac.rnaseq[ ,myx,drop=FALSE]
+  annotc <- annotc[myx, ,drop=FALSE]
+  save(list=c("datac.rnaseq", "datac.affy", "annotc", "sampleinfoc"), compress=TRUE, file=myfn)
 } else { load(myfn) }
 
 ########################
-## retrict data to common tumors and genes
-## step 1b: select the most coprrelated affy probesets for each gene
-myfn <- file.path(saveres, "dna11161_bestpgene_common.RData")
+## restrict data to common tumors and genes
+## step 1b: select the most correlated affy probesets for each gene
+myfn <- file.path(saveres, "dna11161_common_bestpgene.RData")
+if(!file.exists(myfn)) {
+  message("Mapping using the most correlated probeset/gene per entrezgene id")
+  ## load rnaseq gene data
+  load(file.path(saveres, "dna11161_gene_rnaseq.RData"))
+  ## load affy data
+  load(file.path(saveres, "dna11161_affy_frma.RData"))
+  ## common tumors
+  nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
+  sampleinfoc <- sampleinfo.affy[nn, , drop=FALSE]
+  data.affy <- data.affy[nn, , drop=FALSE]
+  data.gene.rnaseq <- data.gene.rnaseq[nn, , drop=FALSE]
+  dataf.gene.rnaseq <- dataf.gene.rnaseq[nn, , drop=FALSE]
+  ## common genes
+  gid.affy <- annot.affy[ ,"EntrezGene.ID"]
+  names(gid.affy) <- rownames(annot.affy)
+  gid.rnaseq <- annot.gene.rnaseq[ ,"EntrezGene.ID"]
+  names(gid.rnaseq) <- rownames(annot.gene.rnaseq) 
+  
+  ## for each gene in common that are not unique in both platforms, look for the best correlated pairs
+  gid.common <- sort(intersect(annot.affy[ ,"EntrezGene.ID"], annot.gene.rnaseq[ ,"EntrezGene.ID"]))
+  gid.affy <- as.character(annot.affy[ ,"EntrezGene.ID"])
+  names(gid.affy) <- rownames(annot.affy)
+  gid.rnaseq <- as.character(annot.gene.rnaseq[ ,"EntrezGene.ID"])
+  names(gid.rnaseq) <- rownames(annot.gene.rnaseq)
+  gid.dupl.affy <- sort(intersect(gid.affy[duplicated(gid.affy)], gid.common))
+  gid.dupl.rnaseq <- sort(intersect(gid.rnaseq[duplicated(gid.rnaseq)], gid.common))
+  ## ambiguous genes
+  gid.ambig <- intersect(unique(c(gid.dupl.affy, gid.dupl.rnaseq)), gid.common)
+  rr <- t(sapply(gid.ambig, function(x, data1, gid1, data2, gid2) {
+    cc <- cor(data1[ , !is.na(gid1) & gid1 == x, drop=FALSE], data2[ , !is.na(gid2) & gid2 == x, drop=FALSE], method="spearman", use="pairwise.complete.obs")
+    mm <- which.max(cc)
+    idx1 <- mm %% nrow(cc)
+    if(idx1 == 0) { idx1 <- nrow(cc) }
+    idx2 <- ceiling(mm / nrow(cc))
+    return(c(rownames(cc)[idx1], colnames(cc)[idx2]))
+  }, data1=data.affy, gid1=gid.affy, data2=data.gene.rnaseq, gid2=gid.rnaseq))
+  dimnames(rr) <- list(paste("geneid", gid.ambig, sep="."), c("affy", "rnaseq"))
+  ## unambiguous genes and merge
+  gid.uniq <- setdiff(gid.common, gid.ambig)
+  rr2 <- cbind(names(gid.affy)[match(gid.uniq, gid.affy)], names(gid.rnaseq)[match(gid.uniq, gid.rnaseq)])
+  dimnames(rr2) <- list(paste("geneid", gid.uniq, sep="."), c("affy", "rnaseq"))
+  mapp <- rbind(rr, rr2)
+  mapp <- mapp[complete.cases(mapp), , drop=FALSE]
+    
+  datac.affy <- data.affy[ , mapp[ ,"affy"], drop=FALSE]
+  datac.rnaseq <- data.gene.rnaseq[ , mapp[ ,"rnaseq"], drop=FALSE]
+  datafc.rnaseq <- dataf.gene.rnaseq[ , mapp[ ,"rnaseq"], drop=FALSE]
+  annotc <- data.frame("probeset.affy"=mapp[ , "affy"], annot.gene.rnaseq[mapp[ , "rnaseq"], , drop=FALSE])
+  colnames(datac.affy) <- colnames(datac.rnaseq) <- colnames(datafc.rnaseq) <- rownames(annotc) <- rownames(mapp)
+
+  save(list=c("datac.rnaseq", "datac.rnaseq", "datac.affy", "annotc", "sampleinfoc"), compress=TRUE, file=myfn)
+} else { load(myfn) }
 
 ########################
 ## retrict data to common tumors and genes
 ## step 1c: select the most coprrelated affy probesets for each trsnacript
-myfn <- file.path(saveres, "dna11161_bestptranscript_common.RData")
+myfn <- file.path(saveres, "dna11161_common_bestptranscript.RData")
+if(!file.exists(myfn)) {
+  message("Mapping using the most correlated probeset/transcript per entrezgene id")
+  ## load rnaseq gene data
+  load(file.path(saveres, "dna11161_transcript_rnaseq.RData"))
+  ## load affy data
+  load(file.path(saveres, "dna11161_affy_frma.RData"))
+  ## common tumors
+  nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
+  sampleinfoc <- sampleinfo.affy[nn, , drop=FALSE]
+  data.affy <- data.affy[nn, , drop=FALSE]
+  data.transcript.rnaseq <- data.transcript.rnaseq[nn, , drop=FALSE]
+  dataf.transcript.rnaseq <- dataf.transcript.rnaseq[nn, , drop=FALSE]
+  ## common genes
+  gid.affy <- annot.affy[ ,"EntrezGene.ID"]
+  names(gid.affy) <- rownames(annot.affy)
+  gid.rnaseq <- annot.transcript.rnaseq[ ,"EntrezGene.ID"]
+  names(gid.rnaseq) <- rownames(annot.transcript.rnaseq) 
+  
+  ## for each gene in common that are not unique in both platforms, look for the best correlated pairs
+  gid.common <- sort(intersect(annot.affy[ ,"EntrezGene.ID"], annot.transcript.rnaseq[ ,"EntrezGene.ID"]))
+  gid.affy <- as.character(annot.affy[ ,"EntrezGene.ID"])
+  names(gid.affy) <- rownames(annot.affy)
+  gid.rnaseq <- as.character(annot.transcript.rnaseq[ ,"EntrezGene.ID"])
+  names(gid.rnaseq) <- rownames(annot.transcript.rnaseq)
+  gid.dupl.affy <- sort(intersect(gid.affy[duplicated(gid.affy)], gid.common))
+  gid.dupl.rnaseq <- sort(intersect(gid.rnaseq[duplicated(gid.rnaseq)], gid.common))
+  ## ambiguous genes
+  gid.ambig <- intersect(unique(c(gid.dupl.affy, gid.dupl.rnaseq)), gid.common)
+  rr <- t(sapply(gid.ambig, function(x, data1, gid1, data2, gid2) {
+    cc <- cor(data1[ , !is.na(gid1) & gid1 == x, drop=FALSE], data2[ , !is.na(gid2) & gid2 == x, drop=FALSE], method="spearman", use="pairwise.complete.obs")
+    if(!all(is.na(cc))) {
+      mm <- which.max(cc)
+      idx1 <- mm %% nrow(cc)
+      if(idx1 == 0) { idx1 <- nrow(cc) }
+      idx2 <- ceiling(mm / nrow(cc))
+      return(c(rownames(cc)[idx1], colnames(cc)[idx2]))
+      } else { return(c(NA, NA)) }
+  }, data1=data.affy, gid1=gid.affy, data2=data.transcript.rnaseq, gid2=gid.rnaseq))
+  dimnames(rr) <- list(paste("geneid", gid.ambig, sep="."), c("affy", "rnaseq"))
+  ## unambiguous genes and merge
+  gid.uniq <- setdiff(gid.common, gid.ambig)
+  rr2 <- cbind(names(gid.affy)[match(gid.uniq, gid.affy)], names(gid.rnaseq)[match(gid.uniq, gid.rnaseq)])
+  dimnames(rr2) <- list(paste("geneid", gid.uniq, sep="."), c("affy", "rnaseq"))
+  mapp <- rbind(rr, rr2)
+  mapp <- mapp[complete.cases(mapp), , drop=FALSE]
+    
+  datac.affy <- data.affy[ , mapp[ ,"affy"], drop=FALSE]
+  datac.rnaseq <- data.transcript.rnaseq[ , mapp[ ,"rnaseq"], drop=FALSE]
+  datafc.rnaseq <- dataf.transcript.rnaseq[ , mapp[ ,"rnaseq"], drop=FALSE]
+  annotc <- data.frame("probeset.affy"=mapp[ , "affy"], annot.transcript.rnaseq[mapp[ , "rnaseq"], , drop=FALSE])
+  colnames(datac.affy) <- colnames(datac.rnaseq) <- colnames(datafc.rnaseq) <- rownames(annotc) <- rownames(mapp)
+
+  save(list=c("datac.rnaseq", "datac.rnaseq", "datac.affy", "annotc", "sampleinfoc"), compress=TRUE, file=myfn)
+} else { load(myfn) }
 
 ########################
 ## for each dataset compute correlations
 
+  
 ## load data
-myfns <- c("jetset"=file.path(saveres, "dna11161_jetset_common.RData"), "bestpgene"=file.path(saveres, "dna11161_bestpgene_common.RData"), "bestptranscript"=file.path(saveres, "dna11161_bestptranscript_common.RData"))
+myfns <- c("jetset"=file.path(saveres, "dna11161_common_jetset.RData"), "bestpgene"=file.path(saveres, "dna11161_common_bestpgene.RData"), "bestptranscript"=file.path(saveres, "dna11161_common_bestptranscript.RData"))
 
+for(i in 1:length(myfns)) {
+  
+  ## load datasets
+  load(myfns[i])
+  
+  ## create directory for results
+  saveres2 <- file.path("saveres", names(myfns)[i])
+  if(!file.exists(saveres2)) { dir.create(saveres2, showWarnings=FALSE) }
+  
+  nc <- ncol(datac.affy)
+  myfn <- file.path(saveres2, sprintf("cores_%s.RData", names(myfns)[i]))
+  if(!file.exists(myfn)) {
+  cores <- sapply(1:nc, function(x, y, z) {
+  	# ct <- cor.test(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs")
+  	# return(ct$estimate)
+  	return(cor(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs"))
+  }, y=datac.affy, z=datac.rnaseq)
+  names(cores) <- colnames(datac.affy)
+  save(list=c("cores"), compress=TRUE, file=myfn)
+  } else { load(myfn) }
 
-
-nc <- ncol(datac.affy)
-myfn <- sprintf("%s/cores.RData", saveres)
-if(!file.exists(myfn)) {
-cores <- sapply(1:nc, function(x, y, z) {
-	# ct <- cor.test(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs")
-	# return(ct$estimate)
-	return(cor(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs"))
-}, y=datac.affy, z=datac.rnaseq)
-names(cores) <- colnames(datac.affy)
-save(list=c("cores"), compress=TRUE, file=myfn)
-} else { load(myfn) }
-
-pdf(file.path(saveres, "correlation_allgenes.pdf"))
-hist(cores, breaks=100, xlim=c(-1,1), freq=FALSE, main="Correlation for all genes\nAFFY vs ILLUMINA RNA-seq", xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(cores, probs=0.05, na.rm=TRUE), quantile(cores, probs=0.25, na.rm=TRUE), quantile(cores, probs=0.5, na.rm=TRUE), quantile(cores, probs=0.75, na.rm=TRUE), quantile(cores, probs=0.95, na.rm=TRUE)))
-dev.off()
-
-# myfn <- sprintf("%s/pcores.RData", saveres)
-# if(!file.exists(myfn)) {
-# pcores.affy <- cor(datac.affy, method="spearman", use="pairwise.complete.obs")
-# pcores.rnaseq <- cor(datac.rnaseq, method="spearman", use="pairwise.complete.obs")
-# pcores <- sapply(1:nc, function(x, y, z) {
-# 	# ct <- cor.test(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs")
-# 	# return(ct$estimate)
-# 	return(cor(x=y[ ,x], y=z[ ,x], method="spearman", use="complete.obs"))
-# }, y=pcores.affy, z=pcores.rnaseq)
-# names(cores) <- colnames(datac.affy)
-# save(list=c("pcores.affy", "pcores.rnaseq", "pcores"), compress=TRUE, file=myfn)
-# } else { load(myfn) }
-# 
-# pdf(file.path(saveres, "pairw_correlation_allgenes.pdf"))
-# hist(pcores, breaks=100, xlim=c(-1,1), freq=FALSE, main="Correlation of pairwise correlations for all genes\nAFFY vs ILLUMINA RNA-seq", xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(cores, probs=0.05, na.rm=TRUE), quantile(cores, probs=0.25, na.rm=TRUE), quantile(cores, probs=0.5, na.rm=TRUE), quantile(cores, probs=0.75, na.rm=TRUE), quantile(cores, probs=0.95, na.rm=TRUE)))
-# dev.off()
-
-## test the corrgram package for visualizing pairwise correlation
+  ## histogram of correlation for each gene
+  pdf(file.path(saveres2, sprintf("correlation_%s_allgenes.pdf", names(myfns)[i])))
+  hist(cores, breaks=100, xlim=c(-1,1), freq=FALSE, main=sprintf("Correlation for all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(cores, probs=0.05, na.rm=TRUE), quantile(cores, probs=0.25, na.rm=TRUE), quantile(cores, probs=0.5, na.rm=TRUE), quantile(cores, probs=0.75, na.rm=TRUE), quantile(cores, probs=0.95, na.rm=TRUE)))
+  dev.off()
+  
+  ## use an arbitrary cutoff of 0.7 and classify genes into low and high cor classes
+  rrc <- 0.7
+  tt <- data.frame("cor"=cores, "cor.low.vs.high"=ifelse(cores >= rrc, "high.cor", "low.cor"), annotc[names(cores), , drop=FALSE])
+  write.csv(tt, file=file.path(saveres2, sprintf("correlation_%s_allgenes.csv", names(myfns)[i])))
+  
+  ## same plot with mixture of 2 gaussians
+  rr <- mclust::Mclust(data=cores, G=2, modelNames="V")
+  ## cutoff
+  rrc <- (max(cores[rr$classification == 1]) + min(cores[rr$classification == 2]))/2
+  xx1 <- seq(-1, 1, 0.01)
+  yy1 <- dnorm(x=xx1, mean=rr$parameters$mean[1], sd=sqrt(rr$parameters$variance$sigmasq[1]))
+  xx2 <- seq(-1, 1, 0.01)
+  yy2 <- dnorm(x=xx2, mean=rr$parameters$mean[2], sd=sqrt(rr$parameters$variance$sigmasq[2]))
+  pdf(file.path(saveres2, sprintf("correlation_mclust_%s_allgenes.pdf", names(myfns)[i])))
+  hist(cores, breaks=100, xlim=c(-1,1), ylim=c(0,4), freq=FALSE, main=sprintf("Correlation for all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Cutoff = %.3g", rrc))
+  lines(x=xx1, y=yy1, type="l", lty=1, lwd=2, col="yellow")
+  lines(x=xx2, y=yy2, type="l", lty=1, lwd=2, col="blue")
+  abline(v=rrc, col="red")
+  legend("topleft", col=c("yellow", "blue"), lwd=c(2,2), legend=c(sprintf("Low cor (mean=%.2g, sd=%.2g)", rr$parameters$mean[1], rr$parameters$variance$sigmasq[1]), sprintf("High cor (mean=%.2g, sd=%.2g)", rr$parameters$mean[2], rr$parameters$variance$sigmasq[2])), bty="n")
+  dev.off()
+  
+  ## histogram of correlation for each pair of sample
+  myfn <- file.path(saveres2, sprintf("corespairw_%s.RData", names(myfns)[i]))
+  if(!file.exists(myfn)) {
+  corespairw <- cor(t(datac.affy), t(datac.rnaseq), method="spearman", use="pairwise.complete.obs")
+  save(list=c("corespairw"), compress=TRUE, file=myfn)
+  } else { load(myfn) }
+  
+  pdf(file.path(saveres2, sprintf("correlation_pairw_heatmap_%s_allgenes.pdf", names(myfns)[i])))
+  hist(diag(corespairw), breaks=10, xlim=c(0.5,1), freq=FALSE, main=sprintf("Pairwise correlation using all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(diag(corespairw), probs=0.05, na.rm=TRUE), quantile(diag(corespairw), probs=0.25, na.rm=TRUE), quantile(diag(corespairw), probs=0.5, na.rm=TRUE), quantile(diag(corespairw), probs=0.75, na.rm=TRUE), quantile(diag(corespairw), probs=0.95, na.rm=TRUE)))
+  dev.off()
+}

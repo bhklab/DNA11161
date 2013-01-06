@@ -58,6 +58,7 @@ http://www.as3d.org/human2006/
  7.  [DEBORA] Write the paper
  
  8. [NORMAN] Submit the Affymetrix data and clinical information to GEO; ask GEO folks if they want us to append the RNA-Seq FPKM as a supplementary file or if they prefer we create a new series for the RNA-Seq FPKM
+ 	-->> DONE
 
  9.  Optional analyses: association of gene and isoform FPKMs with subtypes and survival -> not enough data
  

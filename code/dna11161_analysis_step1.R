@@ -29,19 +29,29 @@ if(!file.exists(myfn)) {
   nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
   sampleinfoc <- sampleinfo.affy[nn, , drop=FALSE]
   ## common genes
-  gid.affy <- annot.affy[ ,"EntrezGene.ID"]
+  gid.affy <- as.character(annot.affy[ ,"EntrezGene.ID"])
   names(gid.affy) <- rownames(annot.affy)
-  gid.rnaseq <- annot.gene.rnaseq[ ,"EntrezGene.ID"]
+  gid.rnaseq <- as.character(annot.gene.rnaseq[ ,"EntrezGene.ID"])
   names(gid.rnaseq) <- rownames(annot.gene.rnaseq)
   ng <- sort(unique(intersect(gid.affy[annot.affy[ ,"best"]], gid.rnaseq[annot.gene.rnaseq[ ,"best"]])))
   ## affy: selection with jetset
   datac.affy <- data.affy[nn, !is.na(gid.affy) & annot.affy[ ,"best"] & (gid.affy %in% ng)]
-  colnames(datac.affy) <- paste("geneid", gid.affy[colnames(datac.affy)], sep=".")
+  pp <- colnames(datac.affy)
+  colnames(datac.affy) <- names(pp) <- paste("geneid", gid.affy[colnames(datac.affy)], sep=".")
   ## rnaseq: selection of the most variant
   datac.rnaseq <- data.gene.rnaseq[nn, !is.na(gid.rnaseq) & annot.gene.rnaseq[ ,"best"] & (gid.rnaseq %in% ng)]
-  annotc <- data.frame("probeset.affy"=colnames(datac.affy), annot.gene.rnaseq[colnames(datac.rnaseq), ,drop=FALSE])
-  colnames(datac.rnaseq) <- rownames(annotc) <- paste("geneid", gid.rnaseq[colnames(datac.rnaseq)], sep=".")
-  datac.rnaseq <- datac.rnaseq[ ,colnames(datac.affy),drop=FALSE]
+  pp2 <- colnames(datac.rnaseq)
+  colnames(datac.rnaseq) <- names(pp2) <- paste("geneid", gid.rnaseq[colnames(datac.rnaseq)], sep=".")
+  pp <- pp[paste("geneid", ng, sep=".")]
+  pp2 <- pp2[paste("geneid", ng, sep=".")]
+  datac.affy <- datac.affy[ , paste("geneid", ng, sep="."), drop=FALSE]
+  datac.rnaseq <- datac.rnaseq[ , paste("geneid", ng, sep="."), drop=FALSE]
+  ## annotations
+  annotc <- annot.gene.rnaseq[pp2, , drop=FALSE]
+  rownames(annotc) <- names(pp2)
+  annotc <- annotc[paste("geneid", ng, sep="."), , drop=FALSE]
+  annotc[ ,"probe"] <- rownames(annotc)
+  annotc <- data.frame("probeset.affy"=pp, annotc)
   ## remove genes with greater or equal than 50% of missing values in either datasets
   myx <- apply(datac.affy, 2, function(x, y) { return(sum(is.na(x)) < (length(x) * y)) }, y=0.5) & apply(datac.rnaseq, 2, function(x, y) { return(sum(is.na(x)) < (length(x) * y)) }, y=0.5)
   datac.affy <- datac.affy[ ,myx,drop=FALSE]
@@ -109,7 +119,7 @@ if(!file.exists(myfn)) {
 
 ########################
 ## retrict data to common tumors and genes
-## step 1c: select the most coprrelated affy probesets for each trsnacript
+## step 1c: select the most coprrelated affy probesets for each trsancript
 myfn <- file.path(saveres, "dna11161_common_bestptranscript.RData")
 if(!file.exists(myfn)) {
   message("Mapping using the most correlated probeset/transcript per entrezgene id")
@@ -234,7 +244,10 @@ for(i in 1:length(myfns)) {
   for(j in 1:nrow(datac.affy)) {
     cc <- cor(x=datac.affy[j, ], y=datac.rnaseq[j, ], method="spearman", use="complete.obs")
     cci <- spearmanCI(cc, sum(complete.cases(datac.affy[j, ], datac.rnaseq[j, ])))
-    plot(x=datac.affy[j, ], y=datac.rnaseq[j, ], main=sprintf("%s, all genes [%s]\nAFFY vs ILLUMINA RNA-seq", rownames(datac.affy)[j], names(myfns)[i]), xlab="Gene expression (AFFY)", ylab="Gene expression (ILLUMINA RNA-seq)", sub=sprintf("Sperman correlation = %.2g [%.2g,%.2g], p=%.1E", cc, cci[1], cci[2], cci[3]), col="blue")
+    smoothScatter(x=datac.affy[j, ], y=datac.rnaseq[j, ], main=sprintf("%s, all genes [%s]\nAFFY vs ILLUMINA RNA-seq", rownames(datac.affy)[j], names(myfns)[i]), xlab="Gene expression (AFFY)", ylab="Gene expression (ILLUMINA RNA-seq)", sub=sprintf("Sperman correlation = %.2g [%.2g,%.2g], p=%.1E", cc, cci[1], cci[2], cci[3]), col="blue")
+    ## add regression line
+    reg1 <- lm(datac.rnaseq[j, ] ~ datac.affy[j, ])
+    abline(reg1, col="black")
   }
   dev.off()
 }

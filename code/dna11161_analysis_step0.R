@@ -263,3 +263,13 @@ write.csv(demo, file=file.path(saveres, "DNA11161_demo.csv"))
 save(list=c("demo"), compress=TRUE, file=file.path(saveres, "DNA11161_demo.RData"))
 
 
+## save all data for GEO
+load(file.path(saveres, "dna11161_affy_frma.RData"))
+load(file.path(saveres, "dna11161_gene_rnaseq.RData"))
+load(file.path(saveres, "dna11161_transcript_rnaseq.RData"))
+save(list=c("data.affy", "annot.affy", "data.gene.rnaseq", "annot.gene.rnaseq", "data.transcript.rnaseq", "annot.transcript.rnaseq"), compress=TRUE, file=file.path(saveres, "dna11161_data_all.RData"))
+
+
+
+
+## end

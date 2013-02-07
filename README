@@ -37,11 +37,15 @@ Analyis steps:
     -> bestptranscript/scatterplot_pairw_bestptranscript_allgenes.pdf
     -->> DONE
  
- 2. [BEN] Compare breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data. For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
+ 2. [BEN] Compare breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data. 
  
- 3. [BEN] For the non-affy signatures, compute the score and classification using either the jetset [or the most correlated probeset -> I would use jetset only as we showed it yields similar correlation, see step 1)
+    * For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
+    -->> DONE
  
-    *   Add the DCN, STROMA CD10, TOP2 INDEX to the pool of signatures;
+    * For the non-affy signatures, compute the score and classification using either the jetset [or the most correlated probeset -> I will use jetset only as we showed it yields similar correlation, see step 1). Add the DCN, STROMA CD10, TOP2 INDEX to the pool of signatures;
+    -->> DONE
+    
+ 3. [BEN] Perform molecular subtyping and compare classification between affy and RNA-seq
  
  4. [NORMAN] Compute and plot correlation between signature scores; try to use the "MEAS" plot;
  

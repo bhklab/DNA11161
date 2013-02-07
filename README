@@ -46,6 +46,7 @@ Analyis steps:
     -->> DONE
     
  3. [BEN] Perform molecular subtyping and compare classification between affy and RNA-seq
+   -->> DONE
  
  4. [NORMAN] Compute and plot correlation between signature scores; try to use the "MEAS" plot;
  

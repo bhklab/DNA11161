@@ -679,9 +679,8 @@ dev.off()
 ## barplot
 ##############
 
-stop()
 ## reorder signatures
-res.scores <- res.scores[c(7, 8, 1, 5, 6, 3, 4, 7, 10, 2, 11, 12)]
+res.scores <- res.scores[c(7, 8, 1, 5, 6, 3, 4, 9, 10, 2, 11, 12)]
 
 ## barplot for correlations for each signature
 pdf(file.path(saveres, "barplot_scores_sigs.pdf"), height=7, width=7)

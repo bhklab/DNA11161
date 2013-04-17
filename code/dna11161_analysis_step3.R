@@ -68,6 +68,7 @@ sbts <- cbind(sbts, "SCMGENE.AFFY"=as.character(sig.affy$subtype2[nn]), "SCMGENE
 
 tt <- table("AFFY"=sig.affy$subtype2[nn], "RNASEQ"=sig.rnaseq$subtype2[nn])
 print(tt)
+write.csv(tt, file=file.path(saveres, "scmgene_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
 kk <- epiKappa(tt, k0=0)
@@ -98,6 +99,7 @@ sbts <- cbind(sbts, "SCMOD1.AFFY"=as.character(sig.affy$subtype2[nn]), "SCMOD1.R
 
 tt <- table("AFFY"=sig.affy$subtype2[nn], "RNASEQ"=sig.rnaseq$subtype2[nn])
 print(tt)
+write.csv(tt, file=file.path(saveres, "scmod1_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
 kk <- epiKappa(tt, k0=0)
@@ -128,6 +130,7 @@ sbts <- cbind(sbts, "SCMOD2.AFFY"=as.character(sig.affy$subtype2[nn]), "SCMOD2.R
 
 tt <- table("AFFY"=sig.affy$subtype2[nn], "RNASEQ"=sig.rnaseq$subtype2[nn])
 print(tt)
+write.csv(tt, file=file.path(saveres, "scmod2_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
 kk <- epiKappa(tt, k0=0)
@@ -164,6 +167,7 @@ sbts <- cbind(sbts, "PAM50.AFFY"=as.character(sig.affy$subtype[nn]), "PAM50.RNAS
 
 tt <- table("AFFY"=sig.affy$subtype[nn], "RNASEQ"=sig.rnaseq$subtype[nn])
 print(tt)
+write.csv(tt, file=file.path(saveres, "pam50_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
 kk <- epiKappa(tt, k0=0)
@@ -187,6 +191,7 @@ sbts <- cbind(sbts, "SSP2006.AFFY"=as.character(sig.affy$subtype[nn]), "SSP2006.
 
 tt <- table("AFFY"=sig.affy$subtype[nn], "RNASEQ"=sig.rnaseq$subtype[nn])
 print(tt)
+write.csv(tt, file=file.path(saveres, "ssp2006_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
 kk <- epiKappa(tt, k0=0)
@@ -210,6 +215,7 @@ sbts <- cbind(sbts, "SSP2003.AFFY"=as.character(sig.affy$subtype[nn]), "SSP2003.
 
 tt <- table("AFFY"=sig.affy$subtype[nn], "RNASEQ"=sig.rnaseq$subtype[nn])
 print(tt)
+write.csv(tt, file=file.path(saveres, "ssp2003_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
 kk <- epiKappa(tt, k0=0)

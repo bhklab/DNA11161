@@ -217,6 +217,7 @@ for(i in 1:length(myfns)) {
   ## boxplot for expression avlues of low vs high correlated genes
   ## affy
   pdf(file.path(saveres2, sprintf("boxplot_cor_vs_median_expr_%s_allgenes.pdf", names(myfns)[i])), width=14, height=7)
+  par(mfrow=c(1, 2))
   ll <- list("low.cor"=apply(datac.affy[ , names(cores)[rrg == "low.cor"], drop=FALSE], 2, median, na.rm=TRUE), "high.cor"=apply(datac.affy[ , names(cores)[rrg == "high.cor"], drop=FALSE], 2, median, na.rm=TRUE))
   wt <- wilcox.test(x=ll[["low.cor"]], y=ll[["high.cor"]])
   boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on Affymetrix", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
@@ -225,7 +226,7 @@ for(i in 1:length(myfns)) {
   wt <- wilcox.test(x=ll[["low.cor"]], y=ll[["high.cor"]])
   boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on ILLUMINA RNA-seq", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
   lapply(ll, median)
-  dev.of()
+  dev.off()
   
   ## same plot with mixture of 2 gaussians
   rr <- mclust::Mclust(data=cores[!is.na(cores)], G=2, modelNames="V")

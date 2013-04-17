@@ -209,8 +209,23 @@ for(i in 1:length(myfns)) {
   
   ## use an arbitrary cutoff of 0.7 and classify genes into low and high cor classes
   rrc <- 0.7
-  tt <- data.frame("cor"=cores, "cor.low.vs.high"=ifelse(cores >= rrc, "high.cor", "low.cor"), annotc[names(cores), , drop=FALSE])
+  rrg <- ifelse(cores >= rrc, "high.cor", "low.cor")
+  rrg <- factor(rrg, levels=c("low.cor", "high.cor"))
+  tt <- data.frame("cor"=cores, "cor.low.vs.high"=rrg, annotc[names(cores), , drop=FALSE])
   write.csv(tt, file=file.path(saveres2, sprintf("correlation_%s_allgenes.csv", names(myfns)[i])))
+  
+  ## boxplot for expression avlues of low vs high correlated genes
+  ## affy
+  pdf(file.path(saveres2, sprintf("boxplot_cor_vs_median_expr_%s_allgenes.pdf", names(myfns)[i])), width=14, height=7)
+  ll <- list("low.cor"=apply(datac.affy[ , names(cores)[rrg == "low.cor"], drop=FALSE], 2, median, na.rm=TRUE), "high.cor"=apply(datac.affy[ , names(cores)[rrg == "high.cor"], drop=FALSE], 2, median, na.rm=TRUE))
+  wt <- wilcox.test(x=ll[["low.cor"]], y=ll[["high.cor"]])
+  boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on Affymetrix", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
+  lapply(ll, median)
+  ll <- list("low.cor"=apply(datac.rnaseq[ , names(cores)[rrg == "low.cor"], drop=FALSE], 2, median, na.rm=TRUE), "high.cor"=apply(datac.rnaseq[ , names(cores)[rrg == "high.cor"], drop=FALSE], 2, median, na.rm=TRUE))
+  wt <- wilcox.test(x=ll[["low.cor"]], y=ll[["high.cor"]])
+  boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on ILLUMINA RNA-seq", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
+  lapply(ll, median)
+  dev.of()
   
   ## same plot with mixture of 2 gaussians
   rr <- mclust::Mclust(data=cores[!is.na(cores)], G=2, modelNames="V")

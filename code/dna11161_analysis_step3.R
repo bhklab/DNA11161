@@ -6,15 +6,17 @@
 
 rm(list=ls(all=TRUE))
 
-source(file.path("code", "ufoo.R"))
-
-saveres <- file.path("saveres")
-if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
-
 library(genefu)
 library(vcd)
 library(epibasix)
 library(Hmisc)
+
+source(file.path("code", "ufoo.R"))
+
+saveres <- file.path("saveres")
+if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
+  
+mycol <- c("darkblue", "darkorange", "darkred")
   
 ########################
 ## step 3: Compare NON Affymetrix-based breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data

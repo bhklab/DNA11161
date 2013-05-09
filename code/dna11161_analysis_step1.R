@@ -6,10 +6,14 @@
 
 rm(list=ls(all=TRUE))
 
+library(mclust)
+
 source(file.path("code", "ufoo.R"))
 
 saveres <- file.path("saveres")
 if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
+
+mycol <- c("darkblue", "darkorange", "darkred")
 
 ########################
 ## step 1: Compute pairwise correlation between Affy and illumina RNA-seq
@@ -204,7 +208,7 @@ for(i in 1:length(myfns)) {
 
   ## histogram of correlation for each gene
   pdf(file.path(saveres2, sprintf("correlation_%s_allgenes.pdf", names(myfns)[i])))
-  hist(cores, breaks=100, xlim=c(-1,1), freq=FALSE, main=sprintf("Correlation for all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(cores, probs=0.05, na.rm=TRUE), quantile(cores, probs=0.25, na.rm=TRUE), quantile(cores, probs=0.5, na.rm=TRUE), quantile(cores, probs=0.75, na.rm=TRUE), quantile(cores, probs=0.95, na.rm=TRUE)))
+  hist(cores, breaks=100, xlim=c(-1,1), ylim=c(0, 800), freq=TRUE, main=sprintf("Correlation for all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(cores, probs=0.05, na.rm=TRUE), quantile(cores, probs=0.25, na.rm=TRUE), quantile(cores, probs=0.5, na.rm=TRUE), quantile(cores, probs=0.75, na.rm=TRUE), quantile(cores, probs=0.95, na.rm=TRUE)))
   dev.off()
   
   ## use an arbitrary cutoff of 0.7 and classify genes into low and high cor classes
@@ -218,11 +222,11 @@ for(i in 1:length(myfns)) {
   ## affy
   pdf(file.path(saveres2, sprintf("boxplot_cor_vs_median_expr_%s_allgenes.pdf", names(myfns)[i])), width=14, height=7)
   par(mfrow=c(1, 2))
-  ll <- list("low.cor"=apply(datac.affy[ , names(cores)[rrg == "low.cor"], drop=FALSE], 2, median, na.rm=TRUE), "high.cor"=apply(datac.affy[ , names(cores)[rrg == "high.cor"], drop=FALSE], 2, median, na.rm=TRUE))
+  ll <- list("low.cor"=apply(datac.affy[ , names(cores)[!is.na(rrg) & rrg == "low.cor"], drop=FALSE], 2, median, na.rm=TRUE), "high.cor"=apply(datac.affy[ , names(cores)[!is.na(rrg) & rrg == "high.cor"], drop=FALSE], 2, median, na.rm=TRUE))
   wt <- wilcox.test(x=ll[["low.cor"]], y=ll[["high.cor"]])
   boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on Affymetrix", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
   lapply(ll, median)
-  ll <- list("low.cor"=apply(datac.rnaseq[ , names(cores)[rrg == "low.cor"], drop=FALSE], 2, median, na.rm=TRUE), "high.cor"=apply(datac.rnaseq[ , names(cores)[rrg == "high.cor"], drop=FALSE], 2, median, na.rm=TRUE))
+  ll <- list("low.cor"=apply(datac.rnaseq[ , names(cores)[!is.na(rrg) & rrg == "low.cor"], drop=FALSE], 2, median, na.rm=TRUE), "high.cor"=apply(datac.rnaseq[ , names(cores)[!is.na(rrg) & rrg == "high.cor"], drop=FALSE], 2, median, na.rm=TRUE))
   wt <- wilcox.test(x=ll[["low.cor"]], y=ll[["high.cor"]])
   boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on ILLUMINA RNA-seq", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
   lapply(ll, median)
@@ -237,11 +241,11 @@ for(i in 1:length(myfns)) {
   xx2 <- seq(-1, 1, 0.01)
   yy2 <- dnorm(x=xx2, mean=rr$parameters$mean[2], sd=sqrt(rr$parameters$variance$sigmasq[2]))
   pdf(file.path(saveres2, sprintf("correlation_mclust_%s_allgenes.pdf", names(myfns)[i])))
-  hist(cores, breaks=100, xlim=c(-1,1), ylim=c(0,4), freq=FALSE, main=sprintf("Correlation for all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Cutoff = %.3g", rrc))
-  lines(x=xx1, y=yy1, type="l", lty=1, lwd=2, col="yellow")
-  lines(x=xx2, y=yy2, type="l", lty=1, lwd=2, col="blue")
-  abline(v=rrc, col="red")
-  legend("topleft", col=c("yellow", "blue"), lwd=c(2,2), legend=c(sprintf("Low cor (mean=%.2g, sd=%.2g)", rr$parameters$mean[1], rr$parameters$variance$sigmasq[1]), sprintf("High cor (mean=%.2g, sd=%.2g)", rr$parameters$mean[2], rr$parameters$variance$sigmasq[2])), bty="n")
+  hist(cores, breaks=100, xlim=c(-1,1), ylim=c(0, 800), freq=TRUE, main=sprintf("Correlation for all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Cutoff = %.3g", rrc))
+  lines(x=xx1, y=yy1*100, type="l", lty=1, lwd=2, col=mycol[3])
+  lines(x=xx2, y=yy2*200, type="l", lty=1, lwd=2, col=mycol[1])
+  abline(v=rrc, col="black", lty=2, lwd=2)
+  legend("topleft", col=mycol[c(1, 3)], lwd=c(2,2), legend=c(sprintf("Low cor (mean=%.2g, sd=%.2g)", rr$parameters$mean[1], rr$parameters$variance$sigmasq[1]), sprintf("High cor (mean=%.2g, sd=%.2g)", rr$parameters$mean[2], rr$parameters$variance$sigmasq[2])), bty="n")
   dev.off()
   
   ## histogram of correlation for each pair of sample
@@ -260,7 +264,7 @@ for(i in 1:length(myfns)) {
   for(j in 1:nrow(datac.affy)) {
     cc <- cor(x=datac.affy[j, ], y=datac.rnaseq[j, ], method="spearman", use="complete.obs")
     cci <- spearmanCI(cc, sum(complete.cases(datac.affy[j, ], datac.rnaseq[j, ])))
-    smoothScatter(x=datac.affy[j, ], y=datac.rnaseq[j, ], main=sprintf("%s, all genes [%s]\nAFFY vs ILLUMINA RNA-seq", rownames(datac.affy)[j], names(myfns)[i]), xlab="Gene expression (AFFY)", ylab="Gene expression (ILLUMINA RNA-seq)", sub=sprintf("Sperman correlation = %.2g [%.2g,%.2g], p=%.1E", cc, cci[1], cci[2], cci[3]), col="blue")
+    smoothScatter(x=datac.affy[j, ], y=datac.rnaseq[j, ], main=sprintf("%s, all genes [%s]\nAFFY vs ILLUMINA RNA-seq", rownames(datac.affy)[j], names(myfns)[i]), xlab="Gene expression (AFFY)", ylab="Gene expression (ILLUMINA RNA-seq)", sub=sprintf("Sperman correlation = %.2g [%.2g,%.2g], p=%.1E", cc, cci[1], cci[2], cci[3]))
     ## add regression line
     reg1 <- lm(datac.rnaseq[j, ] ~ datac.affy[j, ])
     abline(reg1, col="black")

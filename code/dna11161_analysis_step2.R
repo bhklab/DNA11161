@@ -144,50 +144,50 @@ dev.off()
 ##############
 ## TAMR13
 ##############
-sig.affy <- tamr13(data=data.affy, annot=annot.affy, do.mapping=TRUE)
-sig.affy$risk <- as.numeric(cut2(x=sig.affy$score, cuts=median(sig.affy$score))) - 1
-names(sig.affy$risk) <- names(sig.affy$score)
-sig.rnaseq <- tamr13(data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE)
-sig.rnaseq$risk <- as.numeric(cut2(x=sig.rnaseq$score, cuts=median(sig.rnaseq$score))) - 1
-names(sig.rnaseq$risk) <- names(sig.rnaseq$score)
+#sig.affy <- tamr13(data=data.affy, annot=annot.affy, do.mapping=TRUE)
+#sig.affy$risk <- as.numeric(cut2(x=sig.affy$score, cuts=median(sig.affy$score))) - 1
+#names(sig.affy$risk) <- names(sig.affy$score)
+#sig.rnaseq <- tamr13(data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE)
+#sig.rnaseq$risk <- as.numeric(cut2(x=sig.rnaseq$score, cuts=median(sig.rnaseq$score))) - 1
+#names(sig.rnaseq$risk) <- names(sig.rnaseq$score)
 
-tt <- table("AFFY"=sig.affy$risk[nn], "RNASEQ"=sig.rnaseq$risk[nn])
-attributes(tt)$dimnames$AFFY <- c("Low-risk", "High-risk")
-attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "High-risk")
-print(tt)
-tts <- assocstats(tt)
-print(tts)
-kk <- epiKappa(tt, k0=0)
-print(kk)
-pdf(file.path(saveres, "tamr13_risk_contingency_table.pdf"))
-plot(t(tt), main="Contingency table for TAMR13 risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
-dev.off()
+#tt <- table("AFFY"=sig.affy$risk[nn], "RNASEQ"=sig.rnaseq$risk[nn])
+#attributes(tt)$dimnames$AFFY <- c("Low-risk", "High-risk")
+#attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "High-risk")
+#print(tt)
+#tts <- assocstats(tt)
+#print(tts)
+#kk <- epiKappa(tt, k0=0)
+#print(kk)
+#pdf(file.path(saveres, "tamr13_risk_contingency_table.pdf"))
+#plot(t(tt), main="Contingency table for TAMR13 risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
+#dev.off()
 
-res.tabs <- c(res.tabs, list("TAMR13"=tt))
-res.risks <- c(res.risks, list("TAMR13"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
+#res.tabs <- c(res.tabs, list("TAMR13"=tt))
+#res.risks <- c(res.risks, list("TAMR13"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
 
-cc <- cor(sig.affy$score[nn], sig.rnaseq$score[nn], method="spearman", use="complete.obs")
-ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score[nn], sig.rnaseq$score[nn])), alpha=0.05)
-pdf(file.path(saveres, "tamr13_scores.pdf"))
-plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col="darkgrey", main="TAMR13\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TAMR13 scores (AFFY)", ylab="TAMR13 scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
-mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
-abline(mm)
-dev.off()
+#cc <- cor(sig.affy$score[nn], sig.rnaseq$score[nn], method="spearman", use="complete.obs")
+#ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score[nn], sig.rnaseq$score[nn])), alpha=0.05)
+#pdf(file.path(saveres, "tamr13_scores.pdf"))
+#plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col="darkgrey", main="TAMR13\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TAMR13 scores (AFFY)", ylab="TAMR13 scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+#mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+#abline(mm)
+#dev.off()
 
-ttt <- c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])
-names(ttt) <- c("rho", "lower", "upper", "p")
-res.scores <- c(res.scores, list("TAMR13"=ttt))
+#ttt <- c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])
+#names(ttt) <- c("rho", "lower", "upper", "p")
+#res.scores <- c(res.scores, list("TAMR13"=ttt))
 
-pdf(file.path(saveres, "tamr13_scores_risk.pdf"))
-mycol <- rep("darkgrey", length(nn))
-ccc <- sig.affy$risk[nn] + sig.rnaseq$risk[nn]
-mycol[ccc == 0] <- colo[1]
-mycol[ccc == 2] <- colo[3]
-plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col=mycol, main="TAMR13\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TAMR13 scores (AFFY)", ylab="TAMR13 scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
-legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
-mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
-abline(mm)
-dev.off()
+#pdf(file.path(saveres, "tamr13_scores_risk.pdf"))
+#mycol <- rep("darkgrey", length(nn))
+#ccc <- sig.affy$risk[nn] + sig.rnaseq$risk[nn]
+#mycol[ccc == 0] <- colo[1]
+#mycol[ccc == 2] <- colo[3]
+#plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col=mycol, main="TAMR13\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TAMR13 scores (AFFY)", ylab="TAMR13 scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+#legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
+#mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+#abline(mm)
+#dev.off()
 
 ##############
 ## PIK3CAGS
@@ -241,52 +241,52 @@ dev.off()
 ## PLAUMODULE
 ##############
 
-ss <- genefu::sig.score(x=mod1$PLAU, data=data.affy, annot=annot.affy, do.mapping=FALSE)$score
-rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
-names(rr) <- names(ss)
-sig.affy <- list("score"=ss, "risk"=rr)
-ss <- genefu::sig.score(x=mod1$PLAU, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE)$score
-rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
-names(rr) <- names(ss)
-sig.rnaseq <- list("score"=ss, "risk"=rr)
+#ss <- genefu::sig.score(x=mod1$PLAU, data=data.affy, annot=annot.affy, do.mapping=FALSE)$score
+#rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
+#names(rr) <- names(ss)
+#sig.affy <- list("score"=ss, "risk"=rr)
+#ss <- genefu::sig.score(x=mod1$PLAU, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE)$score
+#rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
+#names(rr) <- names(ss)
+#sig.rnaseq <- list("score"=ss, "risk"=rr)
 
-tt <- table("AFFY"=sig.affy$risk[nn], "RNASEQ"=sig.rnaseq$risk[nn])
-attributes(tt)$dimnames$AFFY <- c("Low-risk", "High-risk")
-attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "High-risk")
-print(tt)
-tts <- assocstats(tt)
-print(tts)
-kk <- epiKappa(tt, k0=0)
-print(kk)
-pdf(file.path(saveres, "plaumodule_risk_contingency_table.pdf"))
-plot(t(tt), main="Contingency table for PLAUMODULE risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
-dev.off()
+#tt <- table("AFFY"=sig.affy$risk[nn], "RNASEQ"=sig.rnaseq$risk[nn])
+#attributes(tt)$dimnames$AFFY <- c("Low-risk", "High-risk")
+#attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "High-risk")
+#print(tt)
+#tts <- assocstats(tt)
+#print(tts)
+#kk <- epiKappa(tt, k0=0)
+#print(kk)
+#pdf(file.path(saveres, "plaumodule_risk_contingency_table.pdf"))
+#plot(t(tt), main="Contingency table for PLAUMODULE risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
+#dev.off()
 
-res.tabs <- c(res.tabs, list("PLAUMODULE"=tt))
-res.risks <- c(res.risks, list("PLAUMODULE"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
+#res.tabs <- c(res.tabs, list("PLAUMODULE"=tt))
+#res.risks <- c(res.risks, list("PLAUMODULE"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
 
-cc <- cor(sig.affy$score[nn], sig.rnaseq$score[nn], method="spearman", use="complete.obs")
-ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score[nn], sig.rnaseq$score[nn])), alpha=0.05)
-pdf(file.path(saveres, "plaumodule_scores.pdf"))
-plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col="darkgrey", main="PIK3CAGS\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="PIK3CAGS scores (AFFY)", ylab="PLAUMODULE scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
-mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
-abline(mm)
-dev.off()
+#cc <- cor(sig.affy$score[nn], sig.rnaseq$score[nn], method="spearman", use="complete.obs")
+#ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score[nn], sig.rnaseq$score[nn])), alpha=0.05)
+#pdf(file.path(saveres, "plaumodule_scores.pdf"))
+#plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col="darkgrey", main="PIK3CAGS\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="PIK3CAGS scores (AFFY)", ylab="PLAUMODULE scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+#mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+#abline(mm)
+#dev.off()
 
-ttt <- c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])
-names(ttt) <- c("rho", "lower", "upper", "p")
-res.scores <- c(res.scores, list("PLAUMODULE"=ttt))
+#ttt <- c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])
+#names(ttt) <- c("rho", "lower", "upper", "p")
+#res.scores <- c(res.scores, list("PLAUMODULE"=ttt))
 
-pdf(file.path(saveres, "plaumodule_scores_risk.pdf"))
-mycol <- rep("darkgrey", length(nn))
-ccc <- sig.affy$risk[nn] + sig.rnaseq$risk[nn]
-mycol[ccc == 0] <- colo[1]
-mycol[ccc == 2] <- colo[3]
-plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col=mycol, main="PIK3CAGS\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="PLAUMODULE scores (AFFY)", ylab="PIK3CAGS scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
-legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
-mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
-abline(mm)
-dev.off()
+#pdf(file.path(saveres, "plaumodule_scores_risk.pdf"))
+#mycol <- rep("darkgrey", length(nn))
+#ccc <- sig.affy$risk[nn] + sig.rnaseq$risk[nn]
+#mycol[ccc == 0] <- colo[1]
+#mycol[ccc == 2] <- colo[3]
+#plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col=mycol, main="PIK3CAGS\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="PLAUMODULE scores (AFFY)", ylab="PIK3CAGS scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+#legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
+#mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+#abline(mm)
+#dev.off()
 
 ##############
 ## STAT1MODULE
@@ -494,6 +494,90 @@ mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn]
 mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn] == 1 & sig.rnaseq$risk[nn] == 1] <- colo[3]
 plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col=mycol, main="ONCOTYPE DX\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="ONCOTYPE DX scores (AFFY)", ylab="ONCOTYPE DX scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[2], colo[3], "darkgrey"), legend=c("Low-risk", "Intermediate-risk", "High-risk", "Discordance"), bty="n", pch=16)
+mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+abline(mm)
+dev.off()
+
+##############
+## ROR-S
+##############
+sig.affy <- rorS(data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
+sig.rnaseq <- rorS(data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
+
+tt <- table("AFFY"=sig.affy$risk[nn], "RNASEQ"=sig.rnaseq$risk[nn])
+attributes(tt)$dimnames$AFFY <- c("Low-risk", "Intermediate-risk", "High-risk")
+attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "Intermediate-risk", "High-risk")
+print(tt)
+tts <- assocstats(tt)
+print(tts)
+kk <- epiKappa(tt, k0=0)
+print(kk)
+pdf(file.path(saveres, "rors_risk_contingency_table.pdf"))
+plot(t(tt), main="Contingency table for ROR-S risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
+dev.off()
+
+res.tabs <- c(res.tabs, list("ROR-S"=tt))
+res.risks <- c(res.risks, list("ROR-S"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
+
+cc <- cor(sig.affy$score[nn], sig.rnaseq$score[nn], method="spearman", use="complete.obs")
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score[nn], sig.rnaseq$score[nn])), alpha=0.05)
+pdf(file.path(saveres, "rors_scores.pdf"))
+plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col="darkgrey", main="ROR-S\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="ROR-S scores (AFFY)", ylab="ROR-S scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+abline(mm)
+dev.off()
+
+res.scores <- c(res.scores, list("ROR-S"=c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])))
+
+pdf(file.path(saveres, "rors_scores_risk.pdf"))
+mycol <- rep("darkgrey", length(nn))
+mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn] == "Low" & sig.rnaseq$risk[nn] == "Low"] <- colo[1]
+mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn] == "Intermediate" & sig.rnaseq$risk[nn] == "Intermediate"] <- colo[2]
+mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn] == "High" & sig.rnaseq$risk[nn] == "High"] <- colo[3]
+plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col=mycol, main="ROR-S\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="ROR-S scores (AFFY)", ylab="ROR-S scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+legend("topleft", col=c(colo[1], colo[2], colo[3], "darkgrey"), legend=c("Low-risk", "Intermediate-risk", "High-risk", "Discordance"), bty="n", pch=16)
+mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+abline(mm)
+dev.off()
+
+##############
+## EndoPredict
+##############
+sig.affy <- endoPredict(data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
+sig.rnaseq <- endoPredict(data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
+
+tt <- table("AFFY"=sig.affy$risk[nn], "RNASEQ"=sig.rnaseq$risk[nn])
+attributes(tt)$dimnames$AFFY <- c("Low-risk", "High-risk")
+attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "High-risk")
+print(tt)
+tts <- assocstats(tt)
+print(tts)
+kk <- epiKappa(tt, k0=0)
+print(kk)
+pdf(file.path(saveres, "endopredict_risk_contingency_table.pdf"))
+plot(t(tt), main="Contingency table for ENDOPREDICT DX risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
+dev.off()
+
+res.tabs <- c(res.tabs, list("ENDOPREDICT"=tt))
+res.risks <- c(res.risks, list("ENDOPREDICT"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
+
+cc <- cor(sig.affy$score[nn], sig.rnaseq$score[nn], method="spearman", use="complete.obs")
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score[nn], sig.rnaseq$score[nn])), alpha=0.05)
+pdf(file.path(saveres, "endopredict_scores.pdf"))
+plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col="darkgrey", main="ENDOPREDICT\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="ENDOPREDICT scores (AFFY)", ylab="ENDOPREDICT DX scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
+abline(mm)
+dev.off()
+
+res.scores <- c(res.scores, list("ENDOPREDICT"=c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])))
+
+pdf(file.path(saveres, "endopredict_scores_risk.pdf"))
+mycol <- rep("darkgrey", length(nn))
+mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn] == 0 & sig.rnaseq$risk[nn] == 0] <- colo[1]
+mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn] == 0.5 & sig.rnaseq$risk[nn] == 0.5] <- colo[2]
+mycol[complete.cases(sig.affy$risk[nn], sig.rnaseq$risk[nn]) & sig.affy$risk[nn] == 1 & sig.rnaseq$risk[nn] == 1] <- colo[3]
+plot(x=sig.affy$score[nn], y=sig.rnaseq$score[nn], pch=16, col=mycol, main="ENDOPREDICT DX\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="ENDOPREDICT scores (AFFY)", ylab="ENDOPREDICT scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
 mm <- lm(sig.rnaseq$score[nn] ~ sig.affy$score[nn])
 abline(mm)
 dev.off()

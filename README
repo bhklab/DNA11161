@@ -68,3 +68,5 @@ http://www.as3d.org/human2006/
  9.  Optional analyses: association of gene and isoform FPKMs with subtypes and survival -> not enough data
  
  10. [NORMAN] Retrieve and analyze TCGA data
+ 
+ 11. If possible, add EndoPredict, PAM50/ROR and IRMODULE to the list of signatures

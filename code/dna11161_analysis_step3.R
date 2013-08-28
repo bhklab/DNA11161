@@ -10,6 +10,7 @@ library(genefu)
 library(vcd)
 library(epibasix)
 library(Hmisc)
+library(gdata)
 
 source(file.path("code", "ufoo.R"))
 
@@ -19,9 +20,10 @@ if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
 mycol <- c("darkblue", "darkorange", "darkred")
   
 ########################
-## step 3: Compare NON Affymetrix-based breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data
+## step 3: Compare subtyping calls computed from Affymetrix and Illumina RNA-seq data
 ########################
 
+## read data
 load(file.path(saveres, "DNA11161_demo.RData"))
 load(file.path(saveres, "dna11161_affy_frma.RData"))
 load(file.path(saveres, "dna11161_gene_rnaseq.RData"))

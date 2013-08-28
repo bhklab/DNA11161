@@ -69,4 +69,11 @@ http://www.as3d.org/human2006/
  
  10. [NORMAN] Retrieve and analyze TCGA data
  
- 11. If possible, add EndoPredict, PAM50/ROR and IRMODULE to the list of signatures
+ 11. [BEN] Add EndoPredict, and PAM50/ROR-S to the list of signatures
+   -->> DONE
+   
+ 12. [BEN] Add signature from Ignatiadis et al, JCO, 2012: "CIN70", "IRMODULE", "RAS", "MAPK", "PTEN", "AKTmTOR", "IGF1", "SRC", "MYC", "E2F3", and "BetaCatenin"
+   -->> DONE
+ 
+ 
+ 

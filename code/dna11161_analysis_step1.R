@@ -7,6 +7,9 @@
 rm(list=ls(all=TRUE))
 
 library(mclust)
+library(Hmisc)
+library(frma)
+library(jetset)
 
 source(file.path("code", "ufoo.R"))
 
@@ -123,7 +126,7 @@ if(!file.exists(myfn)) {
 
 ########################
 ## retrict data to common tumors and genes
-## step 1c: select the most coprrelated affy probesets for each trsancript
+## step 1c: select the most correlated affy probesets for each trsancript
 myfn <- file.path(saveres, "dna11161_common_bestptranscript.RData")
 if(!file.exists(myfn)) {
   message("Mapping using the most correlated probeset/transcript per entrezgene id")
@@ -209,6 +212,20 @@ for(i in 1:length(myfns)) {
   ## histogram of correlation for each gene
   pdf(file.path(saveres2, sprintf("correlation_%s_allgenes.pdf", names(myfns)[i])))
   hist(cores, breaks=100, xlim=c(-1,1), ylim=c(0, 800), freq=TRUE, main=sprintf("Correlation for all genes [%s]\nAFFY vs ILLUMINA RNA-seq", names(myfns)[i]), xlab="Spearman correlation", sub=sprintf("Quantiles\t5%%: %.2g; 25%%: %.2g; 50%%: %.2g; 75%%: %.2g; 95%%: %.2g", quantile(cores, probs=0.05, na.rm=TRUE), quantile(cores, probs=0.25, na.rm=TRUE), quantile(cores, probs=0.5, na.rm=TRUE), quantile(cores, probs=0.75, na.rm=TRUE), quantile(cores, probs=0.95, na.rm=TRUE)))
+  dev.off()
+  
+  pdf(file.path(saveres2, sprintf("correlation_boxplot_%s_allgenes.pdf", names(myfns)[i])), width=15, height=10)
+  par(mfrow=c(2, 1))
+  ## rank genes per median expression values in RNA-seq and plot boxes of correlations per 5%
+  oo <- colnames(datac.rnaseq)[order(apply(datac.rnaseq, 2, median, na.rm=TRUE), decreasing=FALSE)]
+  gg <- Hmisc::cut2(x=1:length(oo), g=100)
+  levels(gg) <- 1:length(levels(gg))
+  mp <- boxplot(cores[oo] ~ gg, outline=FALSE, cex=0.8, ylab="Spearman correlation", xlab="Quantiles", main="Correlation wrt increasing expressions measured by RNA-seq")
+  ## rank genes per median expression values in affy and plot boxes of correlations per 5%
+  oo <- colnames(datac.rnaseq)[order(apply(datac.affy, 2, median, na.rm=TRUE), decreasing=FALSE)]
+  gg <- Hmisc::cut2(x=1:length(oo), g=100)
+  levels(gg) <- 1:length(levels(gg))
+  mp <- boxplot(cores[oo] ~ gg, outline=FALSE, cex=0.8, ylab="Spearman correlation", xlab="Quantiles", main="Correlation wrt increasing expressions measured by Affymetrix")
   dev.off()
   
   ## use an arbitrary cutoff of 0.7 and classify genes into low and high cor classes

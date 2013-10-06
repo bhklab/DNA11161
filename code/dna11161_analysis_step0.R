@@ -251,10 +251,14 @@ save(list=c("data.transcript.rnaseq", "dataf.transcript.rnaseq", "annot.transcri
 } else { load(myfn) }
 
 ## clinical information
-dd <- read.csv(file.path("clinic_info", "DNA11161_clinical_info_201202.csv"), row.names=NULL, stringsAsFactors=FALSE)
-rownames(dd) <- paste(gsub(" ", "_", gsub(" $", "", dd[ ,1])), "T", sep="_")
+dd <- read.csv(file.path("clinic_info", "Clinical Data PNC Seq with survival data_FINAL.csv"), row.names=NULL, stringsAsFactors=FALSE)
+dd[dd == "UK" | dd == "" | dd == " "] <- NA
+dd[ , "sample_id"] <- gsub("^LA", "LUMA", dd[ , "sample_id"])
+dd[ , "sample_id"] <- gsub("^LB", "LUMB", dd[ , "sample_id"])
+nn <- paste(gsub("[ ]|-", "_", gsub(" $", "", dd[ ,1])), "T", sep="_")
+rownames(dd) <- nn
 dd <- data.frame("samplename"=rownames(dd), dd)
-nn <- sort(unique(c(row.names(sampleinfo.affy), row.names(sampleinfo.rnaseq), row.names(dd))))
+nn <- sort(unique(c(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq), rownames(dd))))
 demo <- data.frame(matrix(NA, nrow=length(nn), ncol=ncol(dd), dimnames=list(nn, colnames(dd))), stringsAsFactors=FALSE)
 demo <- setcolclass.df(df=demo, colclass=sapply(dd, class), factor.levels=sapply(dd, levels))
 demo[rownames(dd), ] <- dd

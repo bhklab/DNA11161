@@ -28,13 +28,8 @@ mycol <- c("darkblue", "darkorange", "darkred")
 myfn <- file.path(saveres, "dna11161_common_jetset.RData")
 if(!file.exists(myfn)) {
   message("Mapping using jetset")
-  ## load rnaseq gene data
-  load(file.path(saveres, "dna11161_gene_rnaseq.RData"))
-  ## load affy data
-  load(file.path(saveres, "dna11161_affy_frma.RData"))
-  ## common tumors
-  nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
-  sampleinfoc <- sampleinfo.affy[nn, , drop=FALSE]
+  ## load data
+  load(file.path(saveres, "dna11161_data_all.RData"))
   ## common genes
   gid.affy <- as.character(annot.affy[ ,"EntrezGene.ID"])
   names(gid.affy) <- rownames(annot.affy)
@@ -42,11 +37,11 @@ if(!file.exists(myfn)) {
   names(gid.rnaseq) <- rownames(annot.gene.rnaseq)
   ng <- sort(unique(intersect(gid.affy[annot.affy[ ,"best"]], gid.rnaseq[annot.gene.rnaseq[ ,"best"]])))
   ## affy: selection with jetset
-  datac.affy <- data.affy[nn, !is.na(gid.affy) & annot.affy[ ,"best"] & (gid.affy %in% ng)]
+  datac.affy <- data.affy[ , !is.na(gid.affy) & annot.affy[ ,"best"] & (gid.affy %in% ng)]
   pp <- colnames(datac.affy)
   colnames(datac.affy) <- names(pp) <- paste("geneid", gid.affy[colnames(datac.affy)], sep=".")
   ## rnaseq: selection of the most variant
-  datac.rnaseq <- data.gene.rnaseq[nn, !is.na(gid.rnaseq) & annot.gene.rnaseq[ ,"best"] & (gid.rnaseq %in% ng)]
+  datac.rnaseq <- data.gene.rnaseq[ , !is.na(gid.rnaseq) & annot.gene.rnaseq[ ,"best"] & (gid.rnaseq %in% ng)]
   pp2 <- colnames(datac.rnaseq)
   colnames(datac.rnaseq) <- names(pp2) <- paste("geneid", gid.rnaseq[colnames(datac.rnaseq)], sep=".")
   pp <- pp[paste("geneid", ng, sep=".")]
@@ -64,7 +59,7 @@ if(!file.exists(myfn)) {
   datac.affy <- datac.affy[ ,myx,drop=FALSE]
   datac.rnaseq <- datac.rnaseq[ ,myx,drop=FALSE]
   annotc <- annotc[myx, ,drop=FALSE]
-  save(list=c("datac.rnaseq", "datac.affy", "annotc", "sampleinfoc"), compress=TRUE, file=myfn)
+  save(list=c("datac.rnaseq", "datac.affy", "annotc"), compress=TRUE, file=myfn)
 } else { load(myfn) }
 
 ########################
@@ -73,16 +68,8 @@ if(!file.exists(myfn)) {
 myfn <- file.path(saveres, "dna11161_common_bestpgene.RData")
 if(!file.exists(myfn)) {
   message("Mapping using the most correlated probeset/gene per entrezgene id")
-  ## load rnaseq gene data
-  load(file.path(saveres, "dna11161_gene_rnaseq.RData"))
-  ## load affy data
-  load(file.path(saveres, "dna11161_affy_frma.RData"))
-  ## common tumors
-  nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
-  sampleinfoc <- sampleinfo.affy[nn, , drop=FALSE]
-  data.affy <- data.affy[nn, , drop=FALSE]
-  data.gene.rnaseq <- data.gene.rnaseq[nn, , drop=FALSE]
-  dataf.gene.rnaseq <- dataf.gene.rnaseq[nn, , drop=FALSE]
+  ## load data
+  load(file.path(saveres, "dna11161_data_all.RData"))
   ## common genes
   gid.affy <- annot.affy[ ,"EntrezGene.ID"]
   names(gid.affy) <- rownames(annot.affy)
@@ -121,7 +108,7 @@ if(!file.exists(myfn)) {
   annotc <- data.frame("probeset.affy"=mapp[ , "affy"], annot.gene.rnaseq[mapp[ , "rnaseq"], , drop=FALSE])
   colnames(datac.affy) <- colnames(datac.rnaseq) <- colnames(datafc.rnaseq) <- rownames(annotc) <- rownames(mapp)
 
-  save(list=c("datac.rnaseq", "datac.rnaseq", "datac.affy", "annotc", "sampleinfoc"), compress=TRUE, file=myfn)
+  save(list=c("datac.rnaseq", "datac.rnaseq", "datac.affy", "annotc"), compress=TRUE, file=myfn)
 } else { load(myfn) }
 
 ########################
@@ -130,16 +117,8 @@ if(!file.exists(myfn)) {
 myfn <- file.path(saveres, "dna11161_common_bestptranscript.RData")
 if(!file.exists(myfn)) {
   message("Mapping using the most correlated probeset/transcript per entrezgene id")
-  ## load rnaseq gene data
-  load(file.path(saveres, "dna11161_transcript_rnaseq.RData"))
-  ## load affy data
-  load(file.path(saveres, "dna11161_affy_frma.RData"))
-  ## common tumors
-  nn <- intersect(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq))
-  sampleinfoc <- sampleinfo.affy[nn, , drop=FALSE]
-  data.affy <- data.affy[nn, , drop=FALSE]
-  data.transcript.rnaseq <- data.transcript.rnaseq[nn, , drop=FALSE]
-  dataf.transcript.rnaseq <- dataf.transcript.rnaseq[nn, , drop=FALSE]
+  ## load data
+  load(file.path(saveres, "dna11161_data_all.RData"))
   ## common genes
   gid.affy <- annot.affy[ ,"EntrezGene.ID"]
   names(gid.affy) <- rownames(annot.affy)
@@ -180,7 +159,7 @@ if(!file.exists(myfn)) {
   annotc <- data.frame("probeset.affy"=mapp[ , "affy"], annot.transcript.rnaseq[mapp[ , "rnaseq"], , drop=FALSE])
   colnames(datac.affy) <- colnames(datac.rnaseq) <- colnames(datafc.rnaseq) <- rownames(annotc) <- rownames(mapp)
 
-  save(list=c("datac.rnaseq", "datac.rnaseq", "datac.affy", "annotc", "sampleinfoc"), compress=TRUE, file=myfn)
+  save(list=c("datac.rnaseq", "datac.rnaseq", "datac.affy", "annotc"), compress=TRUE, file=myfn)
 } else { load(myfn) }
 
 ########################

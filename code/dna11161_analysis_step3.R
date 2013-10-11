@@ -24,9 +24,7 @@ mycol <- c("darkblue", "darkorange", "darkred")
 ########################
 
 ## read data
-load(file.path(saveres, "DNA11161_demo.RData"))
-load(file.path(saveres, "dna11161_affy_frma.RData"))
-load(file.path(saveres, "dna11161_gene_rnaseq.RData"))
+load(file.path(saveres, "dna11161_data_all.RData"))
 
 ## rnaseq: selection of unique Entrez genid, keep the most variant ENSG in case of ambiguities
 gid.rnaseq <- as.character(annot.gene.rnaseq[ ,"EntrezGene.ID"])
@@ -34,13 +32,6 @@ names(gid.rnaseq) <- rownames(annot.gene.rnaseq)
 data.rnaseq <- data.gene.rnaseq[ , !is.na(gid.rnaseq) & annot.gene.rnaseq[ ,"best"]]
 annot.rnaseq <- annot.gene.rnaseq[colnames(data.rnaseq), ,drop=FALSE]
 colnames(data.rnaseq) <- rownames(annot.rnaseq) <- paste("geneid", gid.rnaseq[colnames(data.rnaseq)], sep=".")
-
-## tumors in common
-nn <- intersect(rownames(data.affy), rownames(data.rnaseq))
-
-data.affy <- data.affy[nn, , drop=FALSE]
-data.rnaseq <- data.rnaseq[nn, , drop=FALSE]
-demo <- demo[nn, , drop=FALSE]
 
 res.risks <- res.tabs <- NULL
 
@@ -68,9 +59,9 @@ title(main="SCMGENE on ILLUMINA RNA-seq")
 sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
 dev.off()
 
-sbts <- cbind(sbts, "SCMGENE.AFFY"=as.character(sig.affy$subtype2[nn]), "SCMGENE.RNASEQ"=as.character(sig.rnaseq$subtype2[nn]))
+sbts <- cbind(sbts, "SCMGENE.AFFY"=as.character(sig.affy$subtype2), "SCMGENE.RNASEQ"=as.character(sig.rnaseq$subtype2))
 
-tt <- table("AFFY"=sig.affy$subtype2[nn], "RNASEQ"=sig.rnaseq$subtype2[nn])
+tt <- table("AFFY"=sig.affy$subtype2, "RNASEQ"=sig.rnaseq$subtype2)
 print(tt)
 write.csv(tt, file=file.path(saveres, "scmgene_risk_contingency_table.csv"))
 tts <- assocstats(tt)
@@ -99,9 +90,9 @@ title(main="SCMOD1 on ILLUMINA RNA-seq")
 sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
 dev.off()
 
-sbts <- cbind(sbts, "SCMOD1.AFFY"=as.character(sig.affy$subtype2[nn]), "SCMOD1.RNASEQ"=as.character(sig.rnaseq$subtype2[nn]))
+sbts <- cbind(sbts, "SCMOD1.AFFY"=as.character(sig.affy$subtype2), "SCMOD1.RNASEQ"=as.character(sig.rnaseq$subtype2))
 
-tt <- table("AFFY"=sig.affy$subtype2[nn], "RNASEQ"=sig.rnaseq$subtype2[nn])
+tt <- table("AFFY"=sig.affy$subtype2, "RNASEQ"=sig.rnaseq$subtype2)
 print(tt)
 write.csv(tt, file=file.path(saveres, "scmod1_risk_contingency_table.csv"))
 tts <- assocstats(tt)
@@ -130,9 +121,9 @@ title(main="SCMOD2 on ILLUMINA RNA-seq")
 sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
 dev.off()
 
-sbts <- cbind(sbts, "SCMOD2.AFFY"=as.character(sig.affy$subtype2[nn]), "SCMOD2.RNASEQ"=as.character(sig.rnaseq$subtype2[nn]))
+sbts <- cbind(sbts, "SCMOD2.AFFY"=as.character(sig.affy$subtype2), "SCMOD2.RNASEQ"=as.character(sig.rnaseq$subtype2))
 
-tt <- table("AFFY"=sig.affy$subtype2[nn], "RNASEQ"=sig.rnaseq$subtype2[nn])
+tt <- table("AFFY"=sig.affy$subtype2, "RNASEQ"=sig.rnaseq$subtype2)
 print(tt)
 write.csv(tt, file=file.path(saveres, "scmod2_risk_contingency_table.csv"))
 tts <- assocstats(tt)
@@ -167,9 +158,9 @@ sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
 sig.rnaseq <- intrinsic.cluster.predict(sbt.model=pam50.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
 sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
 
-sbts <- cbind(sbts, "PAM50.AFFY"=as.character(sig.affy$subtype[nn]), "PAM50.RNASEQ"=as.character(sig.rnaseq$subtype[nn]))
+sbts <- cbind(sbts, "PAM50.AFFY"=as.character(sig.affy$subtype), "PAM50.RNASEQ"=as.character(sig.rnaseq$subtype))
 
-tt <- table("AFFY"=sig.affy$subtype[nn], "RNASEQ"=sig.rnaseq$subtype[nn])
+tt <- table("AFFY"=sig.affy$subtype, "RNASEQ"=sig.rnaseq$subtype)
 print(tt)
 write.csv(tt, file=file.path(saveres, "pam50_risk_contingency_table.csv"))
 tts <- assocstats(tt)
@@ -191,9 +182,9 @@ sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
 sig.rnaseq <- intrinsic.cluster.predict(sbt.model=ssp2006.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
 sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
 
-sbts <- cbind(sbts, "SSP2006.AFFY"=as.character(sig.affy$subtype[nn]), "SSP2006.RNASEQ"=as.character(sig.rnaseq$subtype[nn]))
+sbts <- cbind(sbts, "SSP2006.AFFY"=as.character(sig.affy$subtype), "SSP2006.RNASEQ"=as.character(sig.rnaseq$subtype))
 
-tt <- table("AFFY"=sig.affy$subtype[nn], "RNASEQ"=sig.rnaseq$subtype[nn])
+tt <- table("AFFY"=sig.affy$subtype, "RNASEQ"=sig.rnaseq$subtype)
 print(tt)
 write.csv(tt, file=file.path(saveres, "ssp2006_risk_contingency_table.csv"))
 tts <- assocstats(tt)
@@ -215,9 +206,9 @@ sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
 sig.rnaseq <- intrinsic.cluster.predict(sbt.model=ssp2003.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
 sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
 
-sbts <- cbind(sbts, "SSP2003.AFFY"=as.character(sig.affy$subtype[nn]), "SSP2003.RNASEQ"=as.character(sig.rnaseq$subtype[nn]))
+sbts <- cbind(sbts, "SSP2003.AFFY"=as.character(sig.affy$subtype), "SSP2003.RNASEQ"=as.character(sig.rnaseq$subtype))
 
-tt <- table("AFFY"=sig.affy$subtype[nn], "RNASEQ"=sig.rnaseq$subtype[nn])
+tt <- table("AFFY"=sig.affy$subtype, "RNASEQ"=sig.rnaseq$subtype)
 print(tt)
 write.csv(tt, file=file.path(saveres, "ssp2003_risk_contingency_table.csv"))
 tts <- assocstats(tt)

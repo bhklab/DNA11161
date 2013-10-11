@@ -232,7 +232,6 @@ rr <- genefu::geneid.map(geneid1=gid1, data1=data.transcript, geneid2=gid2)
 annot.transcript <- data.frame(annot.transcript, "best"=FALSE)
 annot.transcript[names(rr$geneid1), "best"] <- TRUE
 
-
 ## rename objects
 data.gene.rnaseq <- data.gene
 dataf.gene.rnaseq <- dataf.gene
@@ -259,11 +258,13 @@ nn <- paste(gsub("[ ]|-", "_", gsub(" $", "", dd[ ,1])), "T", sep="_")
 rownames(dd) <- nn
 dd <- data.frame("samplename"=rownames(dd), dd)
 nn <- sort(unique(c(rownames(sampleinfo.affy), rownames(sampleinfo.rnaseq), rownames(dd))))
-demo <- data.frame(matrix(NA, nrow=length(nn), ncol=ncol(dd), dimnames=list(nn, colnames(dd))), stringsAsFactors=FALSE)
-demo <- setcolclass.df(df=demo, colclass=sapply(dd, class), factor.levels=sapply(dd, levels))
-demo[rownames(dd), ] <- dd
+demo <- dd
 
-write.csv(demo, file=file.path(saveres, "DNA11161_demo.csv"))
+# demo <- data.frame(matrix(NA, nrow=length(nn), ncol=ncol(dd), dimnames=list(nn, colnames(dd))), stringsAsFactors=FALSE)
+# demo <- setcolclass.df(df=demo, colclass=sapply(dd, class), factor.levels=sapply(dd, levels))
+# demo[rownames(dd), ] <- dd
+
+write.csv(demo, file=file.path(saveres, "DNA11161_demo.csv"). row.names=FALSE)
 save(list=c("demo"), compress=TRUE, file=file.path(saveres, "DNA11161_demo.RData"))
 
 
@@ -271,8 +272,18 @@ save(list=c("demo"), compress=TRUE, file=file.path(saveres, "DNA11161_demo.RData
 load(file.path(saveres, "dna11161_affy_frma.RData"))
 load(file.path(saveres, "dna11161_gene_rnaseq.RData"))
 load(file.path(saveres, "dna11161_transcript_rnaseq.RData"))
-save(list=c("data.affy", "annot.affy", "data.gene.rnaseq", "annot.gene.rnaseq", "data.transcript.rnaseq", "annot.transcript.rnaseq"), compress=TRUE, file=file.path(saveres, "dna11161_data_all.RData"))
-
+save(list=c("data.affy", "annot.affy", "data.gene.rnaseq", "annot.gene.rnaseq", "data.transcript.rnaseq", "annot.transcript.rnaseq", "dataf.gene.rnaseq", "dataf.transcript.rnaseq", "sampleinfo.affy", "sampleinfo.rnaseq"), compress=TRUE, file=file.path(saveres, "dna11161_data_all_full.RData"))
+## keep only the common 57 patients
+nn <- fold(intersect, rownames(data.affy), rownames(data.gene.rnaseq), rownames(data.transcript.rnaseq), rownames(dataf.gene.rnaseq), rownames(dataf.transcript.rnaseq), rownames(demo))
+data.affy <- data.affy[nn, , drop=FALSE]
+data.gene.rnaseq <- data.gene.rnaseq[nn, , drop=FALSE]
+data.transcript.rnaseq <- data.transcript.rnaseq[nn, , drop=FALSE]
+dataf.gene.rnaseq <- dataf.gene.rnaseq[nn, , drop=FALSE]
+dataf.transcript.rnaseq <- dataf.transcript.rnaseq[nn, , drop=FALSE]
+sampleinfo.affy <- sampleinfo.affy[nn, , drop=FALSE]
+sampleinfo.rnaseq <- sampleinfo.rnaseq[nn, , drop=FALSE]
+demo <- demo[nn, , drop=FALSE]
+save(list=c("demo", "data.affy", "annot.affy", "data.gene.rnaseq", "annot.gene.rnaseq", "data.transcript.rnaseq", "dataf.gene.rnaseq", "dataf.transcript.rnaseq", "annot.transcript.rnaseq", "sampleinfo.affy", "sampleinfo.rnaseq"), compress=TRUE, file=file.path(saveres, "dna11161_data_all.RData"))
 
 
 

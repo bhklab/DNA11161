@@ -11,6 +11,7 @@ library(vcd)
 library(epibasix)
 library(Hmisc)
 library(gdata)
+library(plotrix)
 
 source(file.path("code", "ufoo.R"))
 
@@ -228,7 +229,6 @@ write.csv(sbts, file=file.path(saveres, "subtype_classifs_affy_rnaseq.csv"))
 ##############
 ## barplot
 ##############
-
 ## barplot for kappa coefficient for each signature
 pdf(file.path(saveres, "barplot_subtypes_sigs.pdf"), height=7, width=4)
 par(las=3, mar=c(8, 5, 5, 2))
@@ -238,8 +238,12 @@ ll[!is.na(ll) & ll < -1] <- -1
 uu <- sapply(res.risks, function(x) { return(x["upper"]) })
 uu[!is.na(uu) & uu > 1] <- 1
 names(xx) <- names(ll) <- names(uu) <- names(res.risks)
+oo <- order(xx, decreasing=TRUE)
+xx <- xx[oo]
+ll <- ll[oo]
+uu <- uu[oo]
 co <- barplot(height=xx, space=0.3, col=rainbow(length(xx), v=0.9), ylab="Kappa coefficient", ylim=c(0,1))
-plotCI(x=co, y=xx, li=ll, ui=uu, err="y", pch=".", add=TRUE)
+plotrix::plotCI(x=co, y=xx, li=ll, ui=uu, err="y", pch=".", add=TRUE)
 dev.off()
 
 

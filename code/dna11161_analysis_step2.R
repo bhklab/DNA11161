@@ -27,6 +27,8 @@ library(Hmisc)
 library(plotrix)
 library(gdata)
 
+nboot <- 100
+
 ## read data
 load(file.path(saveres, "dna11161_data_all.RData"))
 
@@ -37,7 +39,9 @@ data.rnaseq <- data.gene.rnaseq[ , !is.na(gid.rnaseq) & annot.gene.rnaseq[ ,"bes
 annot.rnaseq <- annot.gene.rnaseq[colnames(data.rnaseq), ,drop=FALSE]
 colnames(data.rnaseq) <- rownames(annot.rnaseq) <- paste("geneid", gid.rnaseq[colnames(data.rnaseq)], sep=".")
 
-res.scores <- res.risks <- res.tabs <- NULL
+res.scores <- res.risks <- res.tabs <- rhos <- NULL
+
+boots <- lapply(1:nboot, function (x, y) { return(sample(1:y, replace=TRUE)) }, y=nrow(data.affy))
 
 sig.affy <- NULL
 sig.rnaseq <- NULL
@@ -122,6 +126,23 @@ mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
 dev.off()
+
+## bootstrap
+myfn <- file.path(saveres, "ggi_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- ggi(data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=FALSE, hg=demo[rownames(data.affy),"grade"])
+    sig.rnaseq <- ggi(data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE, hg=demo[rownames(data.rnaseq),"grade"])
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=data.affy, data.rnaseq=data.rnaseq, annot.affy=annot.affy, annot.rnaseq=annot.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "GGI"
+rm(cors)
 
 ##############
 ## GENIUS
@@ -267,6 +288,23 @@ mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
 
+## bootstrap
+myfn <- file.path(saveres, "pik3cags_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- list("score"=pik3cags(data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=FALSE))
+    sig.rnaseq <- list("score"=pik3cags(data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE))
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=data.affy, data.rnaseq=data.rnaseq, annot.affy=annot.affy, annot.rnaseq=annot.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "PIK3CAGS"
+rm(cors)
+
 ##############
 ## PLAUMODULE
 ##############
@@ -312,11 +350,30 @@ mycol <- rep("darkgrey", nrow(demo))
 ccc <- sig.affy$risk + sig.rnaseq$risk
 mycol[ccc == 0] <- colo[1]
 mycol[ccc == 2] <- colo[3]
-plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col=mycol, main="PIK3CAGS\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="PLAUMODULE scores (AFFY)", ylab="PIK3CAGS scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col=mycol, main="PLAUMODULE\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="PLAUMODULE scores (AFFY)", ylab="PLAUMODULE scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
 mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
+
+## bootstrap
+myfn <- file.path(saveres, "plaumodule_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    ss <- genefu::sig.score(x=mod1$PLAU, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=FALSE)$score
+    sig.affy <- list("score"=ss)
+    ss <- genefu::sig.score(x=mod1$PLAU, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)$score
+    sig.rnaseq <- list("score"=ss)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=data.affy, data.rnaseq=data.rnaseq, annot.affy=annot.affy, annot.rnaseq=annot.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "PLAUMODULE"
+rm(cors)
 
 ##############
 ## STAT1MODULE
@@ -363,11 +420,30 @@ mycol <- rep("darkgrey", nrow(demo))
 ccc <- sig.affy$risk + sig.rnaseq$risk
 mycol[ccc == 0] <- colo[1]
 mycol[ccc == 2] <- colo[3]
-plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col=mycol, main="PIK3CAGS\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="STAT1MODULE scores (AFFY)", ylab="PIK3CAGS scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col=mycol, main="STAT1MODULE\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="STAT1MODULE scores (AFFY)", ylab="STAT1MODULE scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
 mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
+
+## bootstrap
+myfn <- file.path(saveres, "stat1module_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    ss <- genefu::sig.score(x=mod1$STAT1, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=FALSE)$score
+    sig.affy <- list("score"=ss)
+    ss <- genefu::sig.score(x=mod1$STAT1, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)$score
+    sig.rnaseq <- list("score"=ss)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=data.affy, data.rnaseq=data.rnaseq, annot.affy=annot.affy, annot.rnaseq=annot.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "STAT1MODULE"
+rm(cors)
 
 
 ########################
@@ -414,6 +490,23 @@ plot(x=sig.rnaseq$score, y=demo[ , "er_score"], pch=16, col=mycol, main="ER\nILL
 legend("topleft", col=c(colo[1], colo[3]), title="ER status (IHC)", legend=c("negative", "positive"), bty="n", pch=16)
 dev.off()
 
+## bootstrap
+myfn <- file.path(saveres, "er_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy$score <- data.affy[x, "geneid.2099"]
+    sig.rnaseq$score <- data.rnaseq[x, "geneid.2099"]
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "ER"
+rm(cors)
+
 ##############
 ## PGR
 ##############
@@ -449,6 +542,23 @@ plot(x=sig.rnaseq$score, y=demo[ , "pgr_score"], pch=16, col=mycol, main="PGR\nI
 legend("topleft", col=c(colo[1], colo[3]), title="PGR status (IHC)", legend=c("negative", "positive"), bty="n", pch=16)
 dev.off()
 
+## bootstrap
+myfn <- file.path(saveres, "pgr_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy$score <- data.affy[x, "geneid.5241"]
+    sig.rnaseq$score <- data.rnaseq[x, "geneid.5241"]
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "PGR"
+rm(cors)
+
 ##############
 ## HER2
 ##############
@@ -477,9 +587,9 @@ pdf(file.path(saveres, "her2_expression_ihc_score.pdf"), width=14, height=7)
 par(mfrow=c(1, 2))
 mycol <- rep("grey", nrow(demo))
 names(mycol) <- rownames(demo)
-mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(0, 1))] <- colo[3]
+mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(0, 1))] <- colo[1]
 mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(2))] <- colo[2]
-mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(3))] <- colo[1]
+mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(3))] <- colo[3]
 ## affy
 cc <- cor(sig.affy$score, demo[ , "her2_IHC"], method="spearman", use="complete.obs")
 plot(x=sig.affy$score, y=demo[ , "her2_IHC"], pch=16, col=mycol, main="HER2\nAFFYMETRIX vs HER2 IHC score RNA-seq", xlab="HER2 gene expression (AFFY)", ylab="HER2 IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
@@ -489,6 +599,23 @@ cc <- cor(sig.rnaseq$score, demo[ , "her2_IHC"], method="spearman", use="complet
 plot(x=sig.rnaseq$score, y=demo[ , "her2_IHC"], pch=16, col=mycol, main="HER2\nILLUMINA RNA-seq vs HER2 IHC score RNA-seq", xlab="HER2 gene expression (ILLUMINA RNA-seq)", ylab="HER2 IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[2], colo[3]), title="HER2 status (IHC)", legend=c("negative", "ambiguous", "positive"), bty="n", pch=16)
 dev.off()
+
+## bootstrap
+myfn <- file.path(saveres, "her2_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy$score <- data.affy[x, "geneid.2064"]
+    sig.rnaseq$score <- data.rnaseq[x, "geneid.2064"]
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "HER2"
+rm(cors)
 
 ##############
 ## GENE70
@@ -532,16 +659,33 @@ mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
 
+## bootstrap
+myfn <- file.path(saveres, "gene70_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- gene70(data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE, std="robust")
+    sig.rnaseq <- gene70(data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE, std="robust")
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "GENE70"
+rm(cors)
+
 ##############
 ## GENE21
 ##############
+
 sig.oncotypedx.save <- sig.oncotypedx
 sig.oncotypedx["GSTM1", "EntrezGene.ID"] <- "2948"
 ## the affymetrix probes for GSTM1 are ambiguious with GSTM2, GSTM3, and GSTM4; GSTM3 is present in the data
 ## http://xavierlab2.mgh.harvard.edu/EnrichmentProfiler/primary/Enrichment/204550_x_at.html
 sig.affy <- oncotypedx(data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
 sig.rnaseq <- oncotypedx(data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
-sig.oncotypedx <- sig.oncotypedx.save
 
 tt <- table("AFFY"=sig.affy$risk, "RNASEQ"=sig.rnaseq$risk)
 attributes(tt)$dimnames$AFFY <- c("Low-risk", "Intermediate-risk", "High-risk")
@@ -578,6 +722,25 @@ legend("topleft", col=c(colo[1], colo[2], colo[3], "darkgrey"), legend=c("Low-ri
 mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
+
+## bootstrap
+myfn <- file.path(saveres, "gene21_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- oncotypedx(data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)
+    sig.rnaseq <- oncotypedx(data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "GENE21"
+rm(cors)
+
+sig.oncotypedx <- sig.oncotypedx.save
 
 ##############
 ## RORS
@@ -621,6 +784,23 @@ mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
 
+## bootstrap
+myfn <- file.path(saveres, "rors_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- rorS(data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)
+    sig.rnaseq <- rorS(data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "RORS"
+rm(cors)
+
 ##############
 ## EndoPredict
 ##############
@@ -662,6 +842,23 @@ legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "Hig
 mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
+
+## bootstrap
+myfn <- file.path(saveres, "endopredict_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- endoPredict(data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)
+    sig.rnaseq <- endoPredict(data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "ENDOPREDICT"
+rm(cors)
 
 ##############
 ## DCN
@@ -717,6 +914,25 @@ mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
 
+## bootstrap
+myfn <- file.path(saveres, "dcn_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq, sigg) {
+    ss <- genefu::sig.score(x=sigg, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)$score
+    sig.affy <- list("score"=ss)
+    ss <- genefu::sig.score(x=sigg, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)$score
+    sig.rnaseq <- list("score"=ss)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq, sigg=sigg)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "DCN"
+rm(cors)
+
 ##############
 ## STROMACD10
 ##############
@@ -771,59 +987,78 @@ mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
 
+## bootstrap
+myfn <- file.path(saveres, "stromacd10_bootstraps.RData")
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq, sigg) {
+    ss <- genefu::sig.score(x=sigg, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)$score
+    sig.affy <- list("score"=ss)
+    ss <- genefu::sig.score(x=sigg, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)$score
+    sig.rnaseq <- list("score"=ss)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq, sigg=sigg)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- "STROMACD10"
+
 ##############
 ## TOP2AINDEX
 ##############
 
-## read published signature
-sigg <- read.csv(file.path("sigs", "desmedt2011_top2aindex_signature.csv"), stringsAsFactor=FALSE)
+# ## read published signature
+# sigg <- read.csv(file.path("sigs", "desmedt2011_top2aindex_signature.csv"), stringsAsFactor=FALSE)
+# 
+# ss <- genefu::sig.score(x=sigg, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)$score
+# rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
+# names(rr) <- names(ss)
+# sig.affy <- list("score"=ss, "risk"=rr)
+# ss <- genefu::sig.score(x=sigg, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)$score
+# rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
+# names(rr) <- names(ss)
+# sig.rnaseq <- list("score"=ss, "risk"=rr)
+# 
+# tt <- table("AFFY"=sig.affy$risk, "RNASEQ"=sig.rnaseq$risk)
+# attributes(tt)$dimnames$AFFY <- c("Low-risk", "High-risk")
+# attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "High-risk")
+# print(tt)
+# tts <- assocstats(tt)
+# print(tts)
+# kk <- epiKappa(tt, k0=0)
+# print(kk)
+# pdf(file.path(saveres, "top2aindex_risk_contingency_table.pdf"))
+# plot(t(tt), main="Contingency table for TOP2AINDEX risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
+# dev.off()
+# 
+# # res.tabs <- c(res.tabs, list("TOP2AINDEX"=tt))
+# # res.risks <- c(res.risks, list("TOP2AINDEX"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
+# 
+# cc <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+# ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score, sig.rnaseq$score)), alpha=0.05)
+# pdf(file.path(saveres, "top2aindex_scores.pdf"))
+# plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col="darkgrey", main="TOP2AINDEX\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TOP2AINDEX scores (AFFY)", ylab="TOP2AINDEX scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+# mm <- lm(sig.rnaseq$score ~ sig.affy$score)
+# abline(mm)
+# dev.off()
+# 
+# ttt <- c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])
+# names(ttt) <- c("rho", "lower", "upper", "p")
+# # res.scores <- c(res.scores, list("TOP2AINDEX"=ttt))
+# 
+# pdf(file.path(saveres, "top2aindex_scores_risk.pdf"))
+# mycol <- rep("darkgrey", nrow(demo))
+# ccc <- sig.affy$risk + sig.rnaseq$risk
+# mycol[ccc == 0] <- colo[1]
+# mycol[ccc == 2] <- colo[3]
+# plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col=mycol, main="TOP2AINDEX\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TOP2AINDEX scores (AFFY)", ylab="TOP2AINDEX scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+# legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
+# mm <- lm(sig.rnaseq$score ~ sig.affy$score)
+# abline(mm)
+# dev.off()
 
-ss <- genefu::sig.score(x=sigg, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)$score
-rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
-names(rr) <- names(ss)
-sig.affy <- list("score"=ss, "risk"=rr)
-ss <- genefu::sig.score(x=sigg, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)$score
-rr <- as.numeric(cut2(x=ss, cuts=median(ss))) - 1
-names(rr) <- names(ss)
-sig.rnaseq <- list("score"=ss, "risk"=rr)
-
-tt <- table("AFFY"=sig.affy$risk, "RNASEQ"=sig.rnaseq$risk)
-attributes(tt)$dimnames$AFFY <- c("Low-risk", "High-risk")
-attributes(tt)$dimnames$RNASEQ <- c("Low-risk", "High-risk")
-print(tt)
-tts <- assocstats(tt)
-print(tts)
-kk <- epiKappa(tt, k0=0)
-print(kk)
-pdf(file.path(saveres, "top2aindex_risk_contingency_table.pdf"))
-plot(t(tt), main="Contingency table for TOP2AINDEX risk predictions\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.3g, 95%%CI [%.3g,%.3g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
-dev.off()
-
-# res.tabs <- c(res.tabs, list("TOP2AINDEX"=tt))
-# res.risks <- c(res.risks, list("TOP2AINDEX"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
-
-cc <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
-ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score, sig.rnaseq$score)), alpha=0.05)
-pdf(file.path(saveres, "top2aindex_scores.pdf"))
-plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col="darkgrey", main="TOP2AINDEX\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TOP2AINDEX scores (AFFY)", ylab="TOP2AINDEX scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
-mm <- lm(sig.rnaseq$score ~ sig.affy$score)
-abline(mm)
-dev.off()
-
-ttt <- c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])
-names(ttt) <- c("rho", "lower", "upper", "p")
-# res.scores <- c(res.scores, list("TOP2AINDEX"=ttt))
-
-pdf(file.path(saveres, "top2aindex_scores_risk.pdf"))
-mycol <- rep("darkgrey", nrow(demo))
-ccc <- sig.affy$risk + sig.rnaseq$risk
-mycol[ccc == 0] <- colo[1]
-mycol[ccc == 2] <- colo[3]
-plot(x=sig.affy$score, y=sig.rnaseq$score, pch=16, col=mycol, main="TOP2AINDEX\nAFFYMETRIX vs ILLUMINA RNA-seq", xlab="TOP2AINDEX scores (AFFY)", ylab="TOP2AINDEX scores (ILLUMINA RNA-seq)", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
-legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "High-risk", "Discordance"), bty="n", pch=16)
-mm <- lm(sig.rnaseq$score ~ sig.affy$score)
-abline(mm)
-dev.off()
 
 ##############
 ## ASCORE
@@ -928,7 +1163,7 @@ dev.off()
 
 res.tabs <- c(res.tabs, list(tt))
 res.risks <- c(res.risks, list(c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
-names(res.tabs)[length(res.tabs)] <- names(res.risks)[length(res.risks)] <- names(gene.modules)[i]
+names(res.tabs)[length(res.tabs)] <- names(res.risks)[length(res.risks)] <- toupper(names(gene.modules)[i])
 
 cc <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
 ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score, sig.rnaseq$score)), alpha=0.05)
@@ -941,7 +1176,7 @@ dev.off()
 ttt <- c("rho"=cc, "lower"=ttc["lower"], "upper"=ttc["upper"], "p"=ttc["p.value"])
 names(ttt) <- c("rho", "lower", "upper", "p")
 res.scores <- c(res.scores, list(ttt))
-names(res.scores)[length(res.scores)] <- names(gene.modules)[i]
+names(res.scores)[length(res.scores)] <- toupper(names(gene.modules)[i])
 
 pdf(file.path(saveres, sprintf("%s_scores_risk.pdf", tolower(names(gene.modules)[i]))))
 mycol <- rep("darkgrey", nrow(demo))
@@ -953,6 +1188,24 @@ legend("topleft", col=c(colo[1], colo[3], "darkgrey"), legend=c("Low-risk", "Hig
 mm <- lm(sig.rnaseq$score ~ sig.affy$score)
 abline(mm)
 dev.off()
+
+## bootstrap
+myfn <- file.path(saveres, sprintf("%s_bootstraps.RData", tolower(names(gene.modules)[i])))
+if (!file.exists(myfn)) {
+  cors <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq, sigg) {
+    ss <- genefu::sig.score(x=sigg, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)$score
+    sig.affy <- list("score"=ss)
+    ss <- genefu::sig.score(x=sigg, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)$score
+    sig.rnaseq <- list("score"=ss)
+    rho <- cor(sig.affy$score, sig.rnaseq$score, method="spearman", use="complete.obs")
+    return(rho)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq, sigg=sigg)
+  save(list="cors", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+rhos <- cbind(rhos, cors)
+colnames(rhos)[ncol(rhos)] <- toupper(names(gene.modules)[i])
 
 }
 
@@ -977,6 +1230,18 @@ mycol <- rainbow(length(xx), v=0.9)
 names(mycol) <- names(xx)[oo]
 co <- barplot(height=xx[oo], space=0.3, col=mycol, ylab="Spearman rho", ylim=c(0,1))
 plotrix::plotCI(x=co, y=xx[oo], li=ll[oo], ui=uu[oo], err="y", pch=".", add=TRUE)
+dev.off()
+
+## statistically compar the rho coefficients from bootstrap values
+xx2 <- as.numeric(rhos)
+gg2 <- factor(rep(colnames(rhos), each=nrow(rhos)), ordered=FALSE)
+print(kruskal.test(x=xx2, g=gg2, paired=TRUE))
+wt.rhos <- pairwise.wilcox.test(x=xx2, g=gg2, p.adjust.method="bonferroni", paired=TRUE)
+print(wt.rhos)
+write.csv(wt.rhos$p.value, file=file.path(saveres, "signatures_bootstrap_comparison_rhos.csv"))
+pdf(file.path(saveres, "signatures_bootstrap_boxplot_rhos.pdf"), width=10, heigh=7)
+par(las=2, mar=c(7,4,4,2) + 0.1)
+boxplot(rhos[ , names(xx)[oo], drop=FALSE], col=rainbow(ncol(rhos), v=0.9), outline=FALSE)
 dev.off()
 
 
@@ -1016,7 +1281,7 @@ colnames(tt) <- rep("", ncol(tt))
 write.csv(tt, file=file.path(saveres, "sigs_risk_tables.csv"), row.names=FALSE)
   
   
-save(list=c("res.scores", "res.risks"), compress=TRUE, file=file.path(saveres, "risk_score_sigs.RData"))
+save(list=c("res.scores", "res.risks", "rhos"), compress=TRUE, file=file.path(saveres, "risk_score_sigs.RData"))
 
 
 

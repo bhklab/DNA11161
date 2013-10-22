@@ -19,7 +19,9 @@ saveres <- file.path("saveres")
 if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
   
 mycol <- c("darkblue", "darkorange", "darkred")
-  
+
+nboot <- 100
+
 ########################
 ## step 3: Compare subtyping calls computed from Affymetrix and Illumina RNA-seq data
 ########################
@@ -34,7 +36,9 @@ data.rnaseq <- data.gene.rnaseq[ , !is.na(gid.rnaseq) & annot.gene.rnaseq[ ,"bes
 annot.rnaseq <- annot.gene.rnaseq[colnames(data.rnaseq), ,drop=FALSE]
 colnames(data.rnaseq) <- rownames(annot.rnaseq) <- paste("geneid", gid.rnaseq[colnames(data.rnaseq)], sep=".")
 
-res.risks <- res.tabs <- NULL
+res.risks <- res.tabs <- kappas <- NULL
+
+boots <- lapply(1:nboot, function (x, y) { return(sample(1:y, replace=TRUE)) }, y=nrow(data.affy))
 
 #################################################
 ## subtype classification
@@ -50,12 +54,12 @@ sbtnn <- c("Basal", "Her2", "LumB", "LumA", "Normal")
 ##############
 
 pdf(file.path(saveres, "scmgene_sbt_plot_affy.pdf"))
-sig.affy <- subtype.cluster.predict(sbt.model=scmgene.robust, data=data.affy, annot=annot.affy, do.mapping=FALSE, plot=TRUE)
+sig.affy <- genefu::subtype.cluster.predict(sbt.model=scmgene.robust, data=data.affy, annot=annot.affy, do.mapping=FALSE, plot=TRUE)
 title(main="SCMGENE on AFFYMETRIX")
 sig.affy$subtype2 <- factor(sig.affy$subtype2, levels=sbtn)
 dev.off()
 pdf(file.path(saveres, "scmgene_sbt_plot_rnaseq.pdf"))
-sig.rnaseq <- subtype.cluster.predict(sbt.model=scmgene.robust, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE, plot=TRUE)
+sig.rnaseq <- genefu::subtype.cluster.predict(sbt.model=scmgene.robust, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE, plot=TRUE)
 title(main="SCMGENE on ILLUMINA RNA-seq")
 sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
 dev.off()
@@ -67,7 +71,7 @@ print(tt)
 write.csv(tt, file=file.path(saveres, "scmgene_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
-kk <- epiKappa(tt, k0=0)
+kk <- epibasix::epiKappa(tt, k0=0)
 print(kk)
 pdf(file.path(saveres, "scmgene_risk_contingency_table.pdf"))
 plot(t(tt), main="Contingency table for SCMGENE subtype classification\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.2g, 95%%CI [%.2g,%.2g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
@@ -76,17 +80,37 @@ dev.off()
 res.tabs <- c(res.tabs, list("SCMGENE"=tt))
 res.risks <- c(res.risks, list("SCMGENE"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
 
+## bootstrap
+myfn <- file.path(saveres, "scmgene_bootstraps.RData")
+if (!file.exists(myfn)) {
+  kks <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- genefu::subtype.cluster.predict(sbt.model=scmgene.robust, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=FALSE, plot=FALSE)
+    sig.affy$subtype2 <- factor(sig.affy$subtype2, levels=sbtn)
+    sig.rnaseq <- genefu::subtype.cluster.predict(sbt.model=scmgene.robust, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE, plot=FALSE)
+    sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
+    tt <- table("AFFY"=sig.affy$subtype2, "RNASEQ"=sig.rnaseq$subtype2)
+    kappa <- epibasix::epiKappa(tt, k0=0)$kappa
+    return(kappa)
+  }, data.affy=data.affy, data.rnaseq=data.rnaseq, annot.affy=annot.affy, annot.rnaseq=annot.rnaseq)
+  save(list="kks", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+kappas <- cbind(kappas, kks)
+colnames(kappas)[ncol(kappas)] <- "SCMGENE"
+rm(kks)
+
 ##############
 ## SCMOD1
 ##############
 
 pdf(file.path(saveres, "scmod1_sbt_plot_affy.pdf"))
-sig.affy <- subtype.cluster.predict(sbt.model=scmod1.robust, data=data.affy, annot=annot.affy, do.mapping=FALSE, plot=TRUE)
+sig.affy <- genefu::subtype.cluster.predict(sbt.model=scmod1.robust, data=data.affy, annot=annot.affy, do.mapping=FALSE, plot=TRUE)
 title(main="SCMOD1 on AFFYMETRIX")
 sig.affy$subtype2 <- factor(sig.affy$subtype2, levels=sbtn)
 dev.off()
 pdf(file.path(saveres, "scmod1_sbt_plot_rnaseq.pdf"))
-sig.rnaseq <- subtype.cluster.predict(sbt.model=scmod1.robust, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE, plot=TRUE)
+sig.rnaseq <- genefu::subtype.cluster.predict(sbt.model=scmod1.robust, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE, plot=TRUE)
 title(main="SCMOD1 on ILLUMINA RNA-seq")
 sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
 dev.off()
@@ -98,7 +122,7 @@ print(tt)
 write.csv(tt, file=file.path(saveres, "scmod1_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
-kk <- epiKappa(tt, k0=0)
+kk <- epibasix::epiKappa(tt, k0=0)
 print(kk)
 pdf(file.path(saveres, "scmod1_risk_contingency_table.pdf"))
 plot(t(tt), main="Contingency table for SCMOD1 subtype classification\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.2g, 95%%CI [%.2g,%.2g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
@@ -107,17 +131,37 @@ dev.off()
 res.tabs <- c(res.tabs, list("SCMOD1"=tt))
 res.risks <- c(res.risks, list("SCMOD1"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
 
+## bootstrap
+myfn <- file.path(saveres, "scmod1_bootstraps.RData")
+if (!file.exists(myfn)) {
+  kks <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- genefu::subtype.cluster.predict(sbt.model=scmod1.robust, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=FALSE, plot=FALSE)
+    sig.affy$subtype2 <- factor(sig.affy$subtype2, levels=sbtn)
+    sig.rnaseq <- genefu::subtype.cluster.predict(sbt.model=scmod1.robust, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE, plot=FALSE)
+    sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
+    tt <- table("AFFY"=sig.affy$subtype2, "RNASEQ"=sig.rnaseq$subtype2)
+    kappa <- epibasix::epiKappa(tt, k0=0)$kappa
+    return(kappa)
+  }, data.affy=data.affy, data.rnaseq=data.rnaseq, annot.affy=annot.affy, annot.rnaseq=annot.rnaseq)
+  save(list="kks", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+kappas <- cbind(kappas, kks)
+colnames(kappas)[ncol(kappas)] <- "SCMOD1"
+rm(kks)
+
 ##############
 ## SCMOD2
 ##############
 
 pdf(file.path(saveres, "scmod2_sbt_plot_affy.pdf"))
-sig.affy <- subtype.cluster.predict(sbt.model=scmod2.robust, data=data.affy, annot=annot.affy, do.mapping=FALSE, plot=TRUE)
+sig.affy <- genefu::subtype.cluster.predict(sbt.model=scmod2.robust, data=data.affy, annot=annot.affy, do.mapping=FALSE, plot=TRUE)
 title(main="SCMOD2 on AFFYMETRIX")
 sig.affy$subtype2 <- factor(sig.affy$subtype2, levels=sbtn)
 dev.off()
 pdf(file.path(saveres, "scmod2_sbt_plot_rnaseq.pdf"))
-sig.rnaseq <- subtype.cluster.predict(sbt.model=scmod2.robust, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE, plot=TRUE)
+sig.rnaseq <- genefu::subtype.cluster.predict(sbt.model=scmod2.robust, data=data.rnaseq, annot=annot.rnaseq, do.mapping=TRUE, plot=TRUE)
 title(main="SCMOD2 on ILLUMINA RNA-seq")
 sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
 dev.off()
@@ -129,7 +173,7 @@ print(tt)
 write.csv(tt, file=file.path(saveres, "scmod2_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
-kk <- epiKappa(tt, k0=0)
+kk <- epibasix::epiKappa(tt, k0=0)
 print(kk)
 pdf(file.path(saveres, "scmod2_risk_contingency_table.pdf"))
 plot(t(tt), main="Contingency table for SCMOD2 subtype classification\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.2g, 95%%CI [%.2g,%.2g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
@@ -138,6 +182,25 @@ dev.off()
 res.tabs <- c(res.tabs, list("SCMOD2"=tt))
 res.risks <- c(res.risks, list("SCMOD2"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
 
+## bootstrap
+myfn <- file.path(saveres, "scmod2_bootstraps.RData")
+if (!file.exists(myfn)) {
+  kks <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- genefu::subtype.cluster.predict(sbt.model=scmod2.robust, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=FALSE, plot=FALSE)
+    sig.affy$subtype2 <- factor(sig.affy$subtype2, levels=sbtn)
+    sig.rnaseq <- genefu::subtype.cluster.predict(sbt.model=scmod2.robust, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE, plot=FALSE)
+    sig.rnaseq$subtype2 <- factor(sig.rnaseq$subtype2, levels=sbtn)
+    tt <- table("AFFY"=sig.affy$subtype2, "RNASEQ"=sig.rnaseq$subtype2)
+    kappa <- epibasix::epiKappa(tt, k0=0)$kappa
+    return(kappa)
+  }, data.affy=data.affy, data.rnaseq=data.rnaseq, annot.affy=annot.affy, annot.rnaseq=annot.rnaseq)
+  save(list="kks", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+kappas <- cbind(kappas, kks)
+colnames(kappas)[ncol(kappas)] <- "SCMOD2"
+rm(kks)
 
 ##############
 ## non affymetrix models
@@ -154,9 +217,9 @@ nn <- intersect(rownames(datac.affy), rownames(datac.rnaseq))
 ##############
 ## PAM50
 ##############
-sig.affy <- intrinsic.cluster.predict(sbt.model=pam50.robust, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
+sig.affy <- genefu::intrinsic.cluster.predict(sbt.model=pam50.robust, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
 sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
-sig.rnaseq <- intrinsic.cluster.predict(sbt.model=pam50.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
+sig.rnaseq <- genefu::intrinsic.cluster.predict(sbt.model=pam50.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
 sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
 
 sbts <- cbind(sbts, "PAM50.AFFY"=as.character(sig.affy$subtype), "PAM50.RNASEQ"=as.character(sig.rnaseq$subtype))
@@ -166,7 +229,7 @@ print(tt)
 write.csv(tt, file=file.path(saveres, "pam50_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
-kk <- epiKappa(tt, k0=0)
+kk <- epibasix::epiKappa(tt, k0=0)
 print(kk)
 pdf(file.path(saveres, "pam50_risk_contingency_table.pdf"))
 plot(t(tt), main="Contingency table for PAM50 subtype classification\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.2g, 95%%CI [%.2g,%.2g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
@@ -175,12 +238,32 @@ dev.off()
 res.tabs <- c(res.tabs, list("PAM50"=tt))
 res.risks <- c(res.risks, list("PAM50"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
 
+## bootstrap
+myfn <- file.path(saveres, "pam50_bootstraps.RData")
+if (!file.exists(myfn)) {
+  kks <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- genefu::intrinsic.cluster.predict(sbt.model=pam50.robust, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)
+    sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
+    sig.rnaseq <- genefu::intrinsic.cluster.predict(sbt.model=pam50.robust, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)
+    sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
+    tt <- table("AFFY"=sig.affy$subtype, "RNASEQ"=sig.rnaseq$subtype)
+    kappa <- epibasix::epiKappa(tt, k0=0)$kappa
+    return(kappa)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="kks", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+kappas <- cbind(kappas, kks)
+colnames(kappas)[ncol(kappas)] <- "PAM50"
+rm(kks)
+
 ##############
 ## SSP2006
 ##############
-sig.affy <- intrinsic.cluster.predict(sbt.model=ssp2006.robust, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
+sig.affy <- genefu::intrinsic.cluster.predict(sbt.model=ssp2006.robust, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
 sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
-sig.rnaseq <- intrinsic.cluster.predict(sbt.model=ssp2006.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
+sig.rnaseq <- genefu::intrinsic.cluster.predict(sbt.model=ssp2006.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
 sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
 
 sbts <- cbind(sbts, "SSP2006.AFFY"=as.character(sig.affy$subtype), "SSP2006.RNASEQ"=as.character(sig.rnaseq$subtype))
@@ -190,7 +273,7 @@ print(tt)
 write.csv(tt, file=file.path(saveres, "ssp2006_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
-kk <- epiKappa(tt, k0=0)
+kk <- epibasix::epiKappa(tt, k0=0)
 print(kk)
 pdf(file.path(saveres, "ssp2006_risk_contingency_table.pdf"))
 plot(t(tt), main="Contingency table for SSP2006 subtype classification\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.2g, 95%%CI [%.2g,%.2g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
@@ -199,12 +282,32 @@ dev.off()
 res.tabs <- c(res.tabs, list("SSP2006"=tt))
 res.risks <- c(res.risks, list("SSP2006"=c("kappa"=kk$kappa, "lower"=kk$CIL, "upper"=kk$CIU, "p"=tts$chisq_tests[1,3])))
 
+## bootstrap
+myfn <- file.path(saveres, "ssp2006_bootstraps.RData")
+if (!file.exists(myfn)) {
+  kks <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- genefu::intrinsic.cluster.predict(sbt.model=ssp2006.robust, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)
+    sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
+    sig.rnaseq <- genefu::intrinsic.cluster.predict(sbt.model=ssp2006.robust, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)
+    sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
+    tt <- table("AFFY"=sig.affy$subtype, "RNASEQ"=sig.rnaseq$subtype)
+    kappa <- epibasix::epiKappa(tt, k0=0)$kappa
+    return(kappa)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="kks", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+kappas <- cbind(kappas, kks)
+colnames(kappas)[ncol(kappas)] <- "SSP2006"
+rm(kks)
+
 ##############
 ## SSP2003
 ##############
-sig.affy <- intrinsic.cluster.predict(sbt.model=ssp2003.robust, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
+sig.affy <- genefu::intrinsic.cluster.predict(sbt.model=ssp2003.robust, data=datac.affy, annot=annotc.affy, do.mapping=TRUE)
 sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
-sig.rnaseq <- intrinsic.cluster.predict(sbt.model=ssp2003.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
+sig.rnaseq <- genefu::intrinsic.cluster.predict(sbt.model=ssp2003.robust, data=datac.rnaseq, annot=annotc.rnaseq, do.mapping=TRUE)
 sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
 
 sbts <- cbind(sbts, "SSP2003.AFFY"=as.character(sig.affy$subtype), "SSP2003.RNASEQ"=as.character(sig.rnaseq$subtype))
@@ -214,7 +317,7 @@ print(tt)
 write.csv(tt, file=file.path(saveres, "ssp2003_risk_contingency_table.csv"))
 tts <- assocstats(tt)
 print(tts)
-kk <- epiKappa(tt, k0=0)
+kk <- epibasix::epiKappa(tt, k0=0)
 print(kk)
 pdf(file.path(saveres, "ssp2003_risk_contingency_table.pdf"))
 plot(t(tt), main="Contingency table for SSP2003 subtype classification\nAFFYMETRIX vs ILLUMINA RNA-seq", sub=sprintf("Kappa coefficient=%.2g, 95%%CI [%.2g,%.2g], p=%.1E", kk$kappa, kk$CIL, kk$CIU, tts$chisq_tests[1,3]))
@@ -225,6 +328,25 @@ res.risks <- c(res.risks, list("SSP2003"=c("kappa"=kk$kappa, "lower"=kk$CIL, "up
 
 write.csv(sbts, file=file.path(saveres, "subtype_classifs_affy_rnaseq.csv"))
 
+## bootstrap
+myfn <- file.path(saveres, "ssp2003_bootstraps.RData")
+if (!file.exists(myfn)) {
+  kks <- sapply(boots, function (x, data.affy, annot.affy, data.rnaseq, annot.rnaseq) {
+    sig.affy <- genefu::intrinsic.cluster.predict(sbt.model=ssp2003.robust, data=data.affy[x, , drop=FALSE], annot=annot.affy, do.mapping=TRUE)
+    sig.affy$subtype <- factor(sig.affy$subtype, levels=sbtnn)
+    sig.rnaseq <- genefu::intrinsic.cluster.predict(sbt.model=ssp2003.robust, data=data.rnaseq[x, , drop=FALSE], annot=annot.rnaseq, do.mapping=TRUE)
+    sig.rnaseq$subtype <- factor(sig.rnaseq$subtype, levels=sbtnn)
+    tt <- table("AFFY"=sig.affy$subtype, "RNASEQ"=sig.rnaseq$subtype)
+    kappa <- epibasix::epiKappa(tt, k0=0)$kappa
+    return(kappa)
+  }, data.affy=datac.affy, data.rnaseq=datac.rnaseq, annot.affy=annotc.affy, annot.rnaseq=annotc.rnaseq)
+  save(list="kks", compress=TRUE, file=myfn)
+} else {
+  load(myfn)
+}
+kappas <- cbind(kappas, kks)
+colnames(kappas)[ncol(kappas)] <- "SSP2003"
+rm(kks)
 
 ##############
 ## barplot
@@ -268,7 +390,15 @@ colnames(tt) <- rep("", ncol(tt))
 write.csv(tt, file=file.path(saveres, "sigs_subtypes_tables.csv"), row.names=FALSE)
   
 
-
-
+## statistically compar the kappa coefficients from bootstrap values
+xx2 <- as.numeric(kappas)
+gg2 <- factor(rep(colnames(kappas), each=nrow(kappas)), ordered=FALSE)
+print(kruskal.test(x=xx2, g=gg2, paired=TRUE))
+wt.kappas <- pairwise.wilcox.test(x=xx2, g=gg2, p.adjust.method="bonferroni", paired=TRUE)
+print(wt.kappas)    
+write.csv(wt.kappas$p.value, file=file.path(saveres, "subtypes_bootstrap_comparison_kappas.csv"))
+pdf(file.path(saveres, "subtypes_bootstrap_boxplot_kappas.pdf"), width=10, heigh=7)
+boxplot(kappas[ , names(xx), drop=FALSE], col=rainbow(ncol(kappas), v=0.9), outline=FALSE)
+dev.off()
 
 ## end

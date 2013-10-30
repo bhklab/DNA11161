@@ -228,6 +228,22 @@ for(i in 1:length(myfns)) {
   lapply(ll, median)
   dev.off()
   
+  ## negative correlation coefficients
+  ## boxplot for expression avlues of negative vs positive correlated genes
+  ## affy
+  pdf(file.path(saveres2, sprintf("boxplot_cornegpos_vs_median_expr_%s_allgenes.pdf", names(myfns)[i])), width=14, height=7)
+  par(mfrow=c(1, 2))
+  ll <- list("negative.cor"=apply(datac.affy[ , names(cores)[!is.na(cores) & cores < 0], drop=FALSE], 2, median, na.rm=TRUE), "positive.cor"=apply(datac.affy[ , names(cores)[!is.na(cores) & cores >= 0], drop=FALSE], 2, median, na.rm=TRUE))
+  wt <- wilcox.test(x=ll[["negative.cor"]], y=ll[["positive.cor"]])
+  boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on Affymetrix", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
+  lapply(ll, median)
+  ll <- list("negative.cor"=apply(datac.rnaseq[ , names(cores)[!is.na(cores) & cores < 0], drop=FALSE], 2, median, na.rm=TRUE), "positive.cor"=apply(datac.rnaseq[ , names(cores)[!is.na(cores) & cores >= 0], drop=FALSE], 2, median, na.rm=TRUE))
+  wt <- wilcox.test(x=ll[["negative.cor"]], y=ll[["positive.cor"]])
+  boxplot(ll, outline=FALSE, col="lightgrey", main="Median expressions on ILLUMINA RNA-seq", xlab=sprintf("Wilcooxn rank sum test p-value = %.1E", wt$p.value), ylab="Gene median expression")
+  lapply(ll, median)
+  dev.off()
+  
+  
   ## same plot with mixture of 2 gaussians
   rr <- mclust::Mclust(data=cores[!is.na(cores)], G=2, modelNames="V")
   ## cutoff

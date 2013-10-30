@@ -129,9 +129,11 @@ sampleinfo <- data.frame("samplename"=rownames(sampleinfo), sampleinfo)
 ## gene expressions
 message("Read gene expression values generated with RNA-seq")
 dd <- read.csv(file.path("rnaseq", "consolidated", "allFpkmGenesEnsembl.txt"), sep="\t", row.names=NULL, stringsAsFactors=FALSE)
+dd[dd == "" | dd == " " | dd == "----"] <- NA
 annott <- dd[ ,1:2]
 ddf <- dd[ , grep("Status", colnames(dd)), drop=FALSE]
-dd <- data.matrix(dd[ , grep("FPKM", colnames(dd)), drop=FALSE])
+dd <- dd[ , grep("FPKM", colnames(dd)), drop=FALSE]
+dd <- data.matrix(dd[apply(dd, 1, function (x) { return(!all(is.na(x))) }), , drop=FALSE])
 rownames(dd) <- rownames(ddf) <- as.character(annott[ ,1])
 data <- t(dd)
 dataf <- t(ddf)
@@ -264,7 +266,7 @@ demo <- dd
 # demo <- setcolclass.df(df=demo, colclass=sapply(dd, class), factor.levels=sapply(dd, levels))
 # demo[rownames(dd), ] <- dd
 
-write.csv(demo, file=file.path(saveres, "DNA11161_demo.csv"). row.names=FALSE)
+write.csv(demo, file=file.path(saveres, "DNA11161_demo.csv"), row.names=FALSE)
 save(list=c("demo"), compress=TRUE, file=file.path(saveres, "DNA11161_demo.RData"))
 
 

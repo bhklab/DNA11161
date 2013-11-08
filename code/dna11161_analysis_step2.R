@@ -482,11 +482,13 @@ mycol[!is.na(demo[ , "er_status"]) & demo[ , "er_status"] == 1] <- colo[3]
 mycol[!is.na(demo[ , "er_status"]) & demo[ , "er_status"] == 0] <- colo[1]
 ## affy
 cc <- cor(sig.affy$score, demo[ , "er_score"], method="spearman", use="complete.obs")
-plot(x=sig.affy$score, y=demo[ , "er_score"], pch=16, col=mycol, main="ER\nAFFYMETRIX vs ER IHC score RNA-seq", xlab="ER gene expression (AFFY)", ylab="ER IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score, demo[ , "er_score"])), alpha=0.05)
+plot(x=sig.affy$score, y=demo[ , "er_score"], pch=16, col=mycol, main="ER\nAFFYMETRIX vs ER IHC score", xlab="ER gene expression (AFFY)", ylab="ER IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[3]), title="ER status (IHC)", legend=c("negative", "positive"), bty="n", pch=16)
 ## rnaseq
 cc <- cor(sig.rnaseq$score, demo[ , "er_score"], method="spearman", use="complete.obs")
-plot(x=sig.rnaseq$score, y=demo[ , "er_score"], pch=16, col=mycol, main="ER\nILLUMINA RNA-seq vs ER IHC score RNA-seq", xlab="ER gene expression (ILLUMINA RNA-seq)", ylab="ER IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.rnaseq$score, demo[ , "er_score"])), alpha=0.05)
+plot(x=sig.rnaseq$score, y=demo[ , "er_score"], pch=16, col=mycol, main="ER\nILLUMINA RNA-seq vs ER IHC score", xlab="ER gene expression (ILLUMINA RNA-seq)", ylab="ER IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[3]), title="ER status (IHC)", legend=c("negative", "positive"), bty="n", pch=16)
 dev.off()
 
@@ -534,11 +536,13 @@ mycol[!is.na(demo[ , "pgr_status"]) & demo[ , "pgr_status"] == 1] <- colo[3]
 mycol[!is.na(demo[ , "pgr_status"]) & demo[ , "pgr_status"] == 0] <- colo[1]
 ## affy
 cc <- cor(sig.affy$score, demo[ , "pgr_score"], method="spearman", use="complete.obs")
-plot(x=sig.affy$score, y=demo[ , "pgr_score"], pch=16, col=mycol, main="PGR\nAFFYMETRIX vs PGR IHC score RNA-seq", xlab="PGR gene expression (AFFY)", ylab="PGR IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score, demo[ , "pgr_score"])), alpha=0.05)
+plot(x=sig.affy$score, y=demo[ , "pgr_score"], pch=16, col=mycol, main="PGR\nAFFYMETRIX vs PGR IHC score", xlab="PGR gene expression (AFFY)", ylab="PGR IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[3]), title="PGR status (IHC)", legend=c("negative", "positive"), bty="n", pch=16)
 ## rnaseq
 cc <- cor(sig.rnaseq$score, demo[ , "pgr_score"], method="spearman", use="complete.obs")
-plot(x=sig.rnaseq$score, y=demo[ , "pgr_score"], pch=16, col=mycol, main="PGR\nILLUMINA RNA-seq vs PGR IHC score RNA-seq", xlab="PGR gene expression (ILLUMINA RNA-seq)", ylab="PGR IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.rnaseq$score, demo[ , "pgr_score"])), alpha=0.05)
+plot(x=sig.rnaseq$score, y=demo[ , "pgr_score"], pch=16, col=mycol, main="PGR\nILLUMINA RNA-seq vs PGR IHC score", xlab="PGR gene expression (ILLUMINA RNA-seq)", ylab="PGR IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[3]), title="PGR status (IHC)", legend=c("negative", "positive"), bty="n", pch=16)
 dev.off()
 
@@ -585,18 +589,26 @@ dev.off()
 
 pdf(file.path(saveres, "her2_expression_ihc_score.pdf"), width=14, height=7)
 par(mfrow=c(1, 2))
+her2status <- demo[ , "her2_IHC"]
+names(her2status) <- rownames(demo)
+## merge HER2 IHC score 0 and 1
+her2status[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(0, 1))] <- 0
 mycol <- rep("grey", nrow(demo))
 names(mycol) <- rownames(demo)
-mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(0, 1))] <- colo[1]
-mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(2))] <- colo[2]
-mycol[!is.na(demo[ , "her2_IHC"]) & is.element(demo[ , "her2_IHC"], c(3))] <- colo[3]
+mycol[!is.na(her2status) & is.element(her2status, c(0))] <- colo[1]
+mycol[!is.na(her2status) & is.element(her2status, c(2))] <- colo[2]
+mycol[!is.na(her2status) & is.element(her2status, c(3))] <- colo[3]
 ## affy
-cc <- cor(sig.affy$score, demo[ , "her2_IHC"], method="spearman", use="complete.obs")
-plot(x=sig.affy$score, y=demo[ , "her2_IHC"], pch=16, col=mycol, main="HER2\nAFFYMETRIX vs HER2 IHC score RNA-seq", xlab="HER2 gene expression (AFFY)", ylab="HER2 IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+her2status <- her2status[names(sig.affy$score)]
+cc <- cor(sig.affy$score, her2status, method="spearman", use="complete.obs")
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.affy$score, her2status)), alpha=0.05)
+plot(x=sig.affy$score, y=her2status, pch=16, col=mycol, main="HER2\nAFFYMETRIX vs HER2 IHC score", xlab="HER2 gene expression (AFFY)", ylab="HER2 IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[2], colo[3]), title="HER2 status (IHC)", legend=c("negative", "ambiguous", "positive"), bty="n", pch=16)
 ## rnaseq
-cc <- cor(sig.rnaseq$score, demo[ , "her2_IHC"], method="spearman", use="complete.obs")
-plot(x=sig.rnaseq$score, y=demo[ , "her2_IHC"], pch=16, col=mycol, main="HER2\nILLUMINA RNA-seq vs HER2 IHC score RNA-seq", xlab="HER2 gene expression (ILLUMINA RNA-seq)", ylab="HER2 IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
+her2status <- her2status[names(sig.rnaseq$score)]
+cc <- cor(sig.rnaseq$score, her2status, method="spearman", use="complete.obs")
+ttc <- spearmanCI(x=cc, n=sum(complete.cases(sig.rnaseq$score, her2status)), alpha=0.05)
+plot(x=sig.rnaseq$score, y=her2status, pch=16, col=mycol, main="HER2\nILLUMINA RNA-seq vs HER2 IHC score", xlab="HER2 gene expression (ILLUMINA RNA-seq)", ylab="HER2 IHC score", sub=sprintf("Spearman correlation: %.3g, 95%%CI [%.3g,%.3g], p=%.1E", cc, ttc["lower"], ttc["upper"], ttc["p.value"]))
 legend("topleft", col=c(colo[1], colo[2], colo[3]), title="HER2 status (IHC)", legend=c("negative", "ambiguous", "positive"), bty="n", pch=16)
 dev.off()
 

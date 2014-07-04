@@ -20,12 +20,14 @@ colo <- c("darkblue", "darkorange", "darkred")
 ## load data
 #myfns <- c("jetset"=file.path(saveres, "dna11161_jetset_common.RData"), "bestpgene"=file.path(saveres, "dna11161_bestpgene_common.RData"), "bestptranscript"=file.path(saveres, "dna11161_bestptranscript_common.RData"))
 
+library(Hmisc)
 library(genefu)
 library(vcd)
 library(epibasix)
 library(Hmisc)
 library(plotrix)
 library(gdata)
+library(jetset)
 
 nboot <- 100
 
@@ -1243,8 +1245,10 @@ names(mycol) <- names(xx)[oo]
 co <- barplot(height=xx[oo], space=0.3, col=mycol, ylab="Spearman rho", ylim=c(0,1))
 plotrix::plotCI(x=co, y=xx[oo], li=ll[oo], ui=uu[oo], err="y", pch=".", add=TRUE)
 dev.off()
+corsig.oo <- xx[oo]
+names(corsig.oo) <- toupper(names(corsig.oo))
 
-## statistically compar the rho coefficients from bootstrap values
+## statistically compare the rho coefficients from bootstrap values
 xx2 <- as.numeric(rhos)
 gg2 <- factor(rep(colnames(rhos), each=nrow(rhos)), ordered=FALSE)
 print(kruskal.test(x=xx2, g=gg2, paired=TRUE))
@@ -1295,10 +1299,116 @@ write.csv(tt, file=file.path(saveres, "sigs_risk_tables.csv"), row.names=FALSE)
   
 save(list=c("res.scores", "res.risks", "rhos"), compress=TRUE, file=file.path(saveres, "risk_score_sigs.RData"))
 
+########################
+## check the proportion of genes in each signature with lowly vs highly expressed genes
+########################
 
+## collect all the entrez gene ids
+dcn <- read.csv(file.path("sigs", "farmer2007_dcn_signature_50.csv"), stringsAsFactor=FALSE)
+stromacd10 <- read.csv(file.path("sigs", "desmedt2012_stroma_cd10_signature_12.csv"), stringsAsFactor=FALSE)
+siggenes <-  c(lapply(gene.modules, function (x) { return(x[ , "EntrezGene.ID"]) }),
+  "GGI"=list(as.character(sig.ggi[ , "EntrezGene.ID"])),
+  "PIK3CAGS"=list(as.character(sig.pik3cags[ , "EntrezGene.ID"])),
+  "PLAUMODULE"=list(as.character(mod1$PLAU[ , "EntrezGene.ID"])),
+  "STAT1MODULE"=list(as.character(mod1$STAT1[ , "EntrezGene.ID"])),
+  "GENE70"=list(as.character(sig.gene70[ , "EntrezGene.ID"])),
+  "GENE21"=list(as.character(sig.oncotypedx[ , "EntrezGene.ID"])),
+  "RORS"=list(as.character(pam50$centroids.map[ , "EntrezGene.ID"])),
+  "ENDOPREDICT"=list(as.character(sig.endoPredict[ , "EntrezGene.ID"])),
+  "DCN"=list(as.character(dcn[ , "EntrezGene.ID"])),
+  "STROMACD10"=list(as.character(stromacd10[ , "EntrezGene.ID"])),
+  "SCMGENE"=list(as.character(unlist(sapply(scmgene.robust$mod, function (x) { return(x[ , "EntrezGene.ID"]) })))),
+  "SCMOD1"=list(as.character(unlist(sapply(scmod1.robust$mod, function (x) { return(x[ , "EntrezGene.ID"]) })))),
+  "SCMOD2"=list(as.character(unlist(sapply(scmod2.robust$mod, function (x) { return(x[ , "EntrezGene.ID"]) })))),
+  "PAM50"=list(as.character(pam50.robust$centroids.map[ , "EntrezGene.ID"])),
+  "SSP2003"=list(as.character(ssp2006.robust$centroids.map[ , "EntrezGene.ID"])),
+  "SSP2006"=list(as.character(ssp2003.robust$centroids.map[ , "EntrezGene.ID"]))
+)
+names(siggenes) <- toupper(names(siggenes))
 
+## barplot comparing quantile of expression and signature genes
+ggseq <- seq(0, 1, by=0.1)
+## compute gene expression quantile
+## affy
+gg.affy <- sort(apply(datac.affy, 2, median, na.rm=TRUE))
+tt <- Hmisc::cut2(x=gg.affy, cuts=quantile(gg.affy, probs=ggseq))
+names(tt) <- names(gg.affy)
+levels(tt) <- sprintf("%i-%i%%", round(ggseq[-length(ggseq)] * 100), round(ggseq[-1] * 100))
+gg.affy <- tt
+## rnaseq
+gg.rnaseq <- sort(apply(datac.rnaseq, 2, median, na.rm=TRUE))
+tt <- Hmisc::cut2(x=gg.rnaseq, cuts=quantile(gg.rnaseq, probs=ggseq))
+names(tt) <- names(gg.rnaseq)
+levels(tt) <- sprintf("%i-%i%%", round(ggseq[-length(ggseq)] * 100), round(ggseq[-1] * 100))
+gg.rnaseq <- tt
+gg <- fold(intersect, gg, names(gg.affy), names(gg.rnaseq))
 
+## compute proportion per quantile
+gg <- paste("geneid", sort(unique(unlist(siggenes))), sep=".")
+prop.affy <- sapply(levels(gg.affy), function (x, y, z) {
+  return (length(intersect(names(y)[!is.na(y) & y == x], z)))
+}, y=gg.affy, z=gg) / length(gg)
+prop.rnaseq <- sapply(levels(gg.rnaseq), function (x, y, z) {
+  return (length(intersect(names(y)[!is.na(y) & y == x], z)))
+}, y=gg.rnaseq, z=gg) / length(gg)
+## barplot for combined list of genes
+pp <- rep(NA, length(prop.affy) * 3)
+pp[seq(1, length(pp), by=3)] <- prop.affy
+pp[seq(2, length(pp), by=3)] <- prop.rnaseq
+names(pp) <- rep(NA, length(pp))
+names(pp)[seq(2, length(pp), by=3)] <- names(prop.affy)
+pdf(file.path(saveres, "sig_genes_exprs_quantile_combined.pdf"), width=10, height=7)
+# par(xaxt="n")
+tt <- barplot(pp, xlab="Expression quantile", ylab="Proportion of signature genes", col=rep(c("darkblue", "darkred", "white"), length(prop.affy)), names.arg=names(pp), main="All signature genes combined")
+# tt <- apply(cbind(tt[seq(1, length(pp), by=3), 1], tt[seq(2, length(pp), by=3), 1]), 1, mean)
+# axis(1, at=tt, tick=FALSE, labels=names(prop.affy))
+# text(x=tt, y=par("usr")[3] + (par("usr")[4] * 0.01), labels=names(prop.affy))
 
+## test for increasing proportion with expression quantile
+# dd <- data.frame("quantile"=1:length(prop.affy), "prop"=rank(prop.affy))
+# rr <- summary(lm(prop ~ quantile, data=dd))
+# pv.affy <- ifelse (rr$coefficients["quantile", "Estimate"] > 0, rr$coefficients["quantile", "Pr(>|t|)"], 1 - rr$coefficients["quantile", "Pr(>|t|)"])
+pv.affy <- cor.test(x=1:length(prop.affy), y=rank(prop.affy), method="spearman", alternative="greater")$p.value
+# dd <- data.frame("quantile"=1:length(prop.rnaseq), "prop"=rank(prop.rnaseq))
+# rr <- summary(lm(prop ~ quantile, data=dd))
+# pv.rnaseq <- ifelse (rr$coefficients["quantile", "Estimate"] > 0, rr$coefficients["quantile", "Pr(>|t|)"], 1 - rr$coefficients["quantile", "Pr(>|t|)"])
+pv.rnaseq <- cor.test(x=1:length(prop.affy), y=rank(prop.rnaseq), method="spearman", alternative="greater")$p.value
+legend("topleft", legend=c(sprintf("Affymetrix microarray (p = %.1E)", pv.affy), sprintf("Illumina RNA-seq (p = %.1E)", pv.rnaseq)), col=c("darkblue", "darkred"), pch=15, pt.cex=2, bty="n")
+dev.off()
 
+## for each signature separately
+pv.affy.all <- pv.rnaseq.all <- NULL
+pdf(file.path(saveres, "sig_genes_exprs_quantile_all.pdf"), width=10, height=7)
+for(i in 1:length(siggenes)) {
+  ## barplot comparing quantile of expression and signature genes
+  gg <- paste("geneid", sort(unique(siggenes[[i]])), sep=".")
+  ## compute gene expression quantile
+  gg <- fold(intersect, gg, names(gg.affy), names(gg.rnaseq))
+  ## compute proportion per quantile
+  prop.affy <- sapply(levels(gg.affy), function (x, y, z) {
+    return (length(intersect(names(y)[!is.na(y) & y == x], z)))
+  }, y=gg.affy, z=gg) / length(gg)
+  prop.rnaseq <- sapply(levels(gg.rnaseq), function (x, y, z) {
+    return (length(intersect(names(y)[!is.na(y) & y == x], z)))
+  }, y=gg.rnaseq, z=gg) / length(gg)
+  ## barplot for combined list of genes
+  pp <- rep(NA, length(prop.affy) * 3)
+  pp[seq(1, length(pp), by=3)] <- prop.affy
+  pp[seq(2, length(pp), by=3)] <- prop.rnaseq
+  names(pp) <- rep(NA, length(pp))
+  names(pp)[seq(2, length(pp), by=3)] <- names(prop.affy)
+  tt <- barplot(pp, xlab="Expression quantile", ylab="Proportion of signature genes", col=rep(c("darkblue", "darkred", "white"), length(prop.affy)), names.arg=names(pp), main=sprintf("%s", names(siggenes)[i]))
+  ## test for increasing proportion with expression quantile
+  pv.affy <- cor.test(x=1:length(prop.affy), y=prop.affy, method="spearman", alternative="greater")$p.value
+  pv.affy.all  <- c(pv.affy.all , pv.affy)
+  pv.rnaseq <- cor.test(x=1:length(prop.affy), y=prop.rnaseq, method="spearman", alternative="greater")$p.value
+  pv.rnaseq.all <- c(pv.rnaseq.all, pv.rnaseq)
+  legend("topleft", legend=c(sprintf("Affymetrix microarray (p = %.1E)", pv.affy), sprintf("Illumina RNA-seq (p = %.1E)", pv.rnaseq)), col=c("darkblue", "darkred"), pch=15, pt.cex=2, bty="n")
+}
+dev.off()
+names(pv.affy.all)  <- names(pv.rnaseq.all) <- names(siggenes)
+
+print(cor.test(x=corsig.oo, y=-log10(pv.affy.all[names(corsig.oo)]), method="spearman", alternative="two.sided"))
+print(cor.test(x=corsig.oo, y=-log10(pv.rnaseq.all[names(corsig.oo)]), method="spearman", alternative="two.sided"))
 
 ## end

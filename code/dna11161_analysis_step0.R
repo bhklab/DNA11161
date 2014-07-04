@@ -11,6 +11,9 @@ source(file.path("code", "ufoo.R"))
 saveres <- file.path("saveres")
 if(!file.exists(saveres)) { dir.create(saveres, showWarnings=FALSE) }
 
+library(jetset)
+library(biomaRt)
+  
 ########################
 ## step 0: data normalization and formatting
 ########################
@@ -95,7 +98,7 @@ js[gg.uniq, "best"] <- TRUE
 js[myscore[ ,"probe"], "best"] <- TRUE
 ## more annotations from biomart
 ugid <- sort(unique(js[ ,"EntrezID"]))
-gene.an <- getBM(attributes=c("entrezgene", "ensembl_gene_id", "hgnc_symbol", "unigene", "description", "chromosome_name", "start_position", "end_position", "strand", "band"), filters="entrezgene", values=ugid, mart=ensembl.db)
+gene.an <- biomaRt::getBM(attributes=c("entrezgene", "ensembl_gene_id", "hgnc_symbol", "unigene", "description", "chromosome_name", "start_position", "end_position", "strand", "band"), filters="entrezgene", values=ugid, mart=ensembl.db)
 gene.an[gene.an == "" | gene.an == " "] <- NA
 gene.an <- gene.an[!is.na(gene.an[ , "entrezgene"]) & !duplicated(gene.an[ , "entrezgene"]), , drop=FALSE]
 annot <- data.frame(matrix(NA, nrow=ncol(data), ncol=ncol(gene.an)+1, dimnames=list(colnames(data), c("probe", colnames(gene.an)))))
@@ -192,11 +195,10 @@ rownames(data.gene) <- rownames(data.transcript) <- rownames(dataf.gene) <- rown
 message("Annotate genes and transcripts with biomart")
 
 ## for genes
-library(biomaRt)
-ensembl.db <- useMart("ensembl", dataset="hsapiens_gene_ensembl")
+ensembl.db <- biomaRt::useMart("ensembl", dataset="hsapiens_gene_ensembl")
 gid <- colnames(data.gene)
 filt <- "ensembl_gene_id"
-gene.an <- getBM(attributes=c(filt, "entrezgene", "hgnc_symbol", "unigene", "description", "chromosome_name", "start_position", "end_position", "strand", "band"), filters=filt, values=gid, mart=ensembl.db)
+gene.an <- biomaRt::getBM(attributes=c(filt, "entrezgene", "hgnc_symbol", "unigene", "description", "chromosome_name", "start_position", "end_position", "strand", "band"), filters=filt, values=gid, mart=ensembl.db)
 gene.an[gene.an == "" | gene.an == " "] <- NA
 gene.an <- gene.an[!is.na(gene.an[ , filt]) & !duplicated(gene.an[ , filt]), , drop=FALSE]
 annot <- data.frame(matrix(NA, nrow=length(gid), ncol=ncol(gene.an), dimnames=list(gid, colnames(gene.an))))

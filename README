@@ -1,81 +1,8 @@
-Analyis steps:
----------------
+R code for 
 
-0. [BEN] Data normalization and formatting for Affymetrix and RNA-Seq gene expressions
-   -> saveres/dna11161_gene_rnaseq.RData: RNA-seq data at gene level
-   -> saveres/dna11161_transcript_rnaseq.RData: RNA-seq data at transcript level
-   -> saveres/dna11161_affy_frma.RData: affymetrix data
-   -->> DONE
+Transfer of clinically relevant gene expression signatures in breast cancer: from Affymetrix microarray to Illumina RNA-Sequencing technology.
+Fumagalli D, Blanchet-Cohen A, Brown D, Desmedt C, Gacquer D, Michiels S, Rothé F, Majjaj S, Salgado R, Larsimont D, Ignatiadis M, Maetens M, Piccart M, Detours V, Sotiriou C, Haibe-Kains B.
+BMC Genomics. 2014 Nov 21;15:1008. doi: 10.1186/1471-2164-15-1008.
+PMID: 25412710 
 
-1. [BEN] Compute pairwise correlation between Affy and illumina RNA-seq by
- 
-(a) Selecting the best Affy probesets using jetset vs RNA-seq at the gene level
-   -> saveres/dna11161_common_jetset.RData: maping using jetset
-   -->> DONE
-
-(b) Selecting the most correlated probesets;
-   -> saveres/dna11161_common_bestpgene.RData: mapping using the most correlated affy probeset with rnaseq at the gene level
-   -->> DONE
-
-(c) Use the isoform expression FPKMs and compare then with the most similar probesets
-   -> saveres/dna11161_common_bestptranscript.RData: mapping using the most correlated affy probeset with rnaseq at the transcript level
-   -->> DONE
- 
-    *   Test whether selecting the most correlated probeset per gene or the most correlated pair (probeset, transcript) is dramatically improving the correlation distribution
-    -> the answer is NO.
-   -->> DONE
-   
-    *   Plot, for each patient, the expression values as measured by Affy and RNA-Seq; this will help showing that the dynamic range of RNAseq is better than the one of microarray for low expression genes
-    -> jetset/correlation_jetset_allgenes.csv
-    -> bestpgene/correlation_bestpgene_allgenes.csv
-    -> bestptranscript/correlation_bestptranscript_allgenes.csv
-    -->> DONE
-    
-    *	From the correlation distribution, classify the well and poorly correlated genes
-    -> jetset/scatterplot_pairw_jetset_allgenes.pdf
-    -> bestpgene/scatterplot_pairw_bestpgene_allgenes.pdf
-    -> bestptranscript/scatterplot_pairw_bestptranscript_allgenes.pdf
-    -->> DONE
- 
- 2. [BEN] Compare breast cancer gene expression signatures computed from Affymetrix and Illumina RNA-seq data. 
- 
-    * For the Affy signatures, use the probesets or the RNA-seq data and compute signature scores and classification, and compare them;
-    -->> DONE
- 
-    * For the non-affy signatures, compute the score and classification using either the jetset [or the most correlated probeset -> I will use jetset only as we showed it yields similar correlation, see step 1). Add the DCN, STROMA CD10, TOP2 INDEX to the pool of signatures;
-    -->> DONE
-    
- 3. [BEN] Perform molecular subtyping and compare classification between affy and RNA-seq
-   -->> DONE
- 
- 4. [NORMAN] Compute and plot correlation between signature scores; try to use the "MEAS" plot;
- 
- 5. [NORMAN] Check whether large gene signatures are always more correlated, do a random selection of genes of increasing size;
- 
-6. [TEAM WORK] Find the reasons why some gene are poorly correlated. Start with some genes of interest (ESR1, ERBB2, PLAU, STAT1)
-    *   level of expression [BEN]
-    *   alternative splicing, using bioMart or the website Christine mentioned [DEBORA]
-http://www.as3d.org/human2006/
- 
-    *   Mappability [VINCENT, ?]
-    *   association with gene lengths using the genomcfeatures package [NORMAN]
- 
- 7.  [DEBORA] Write the paper
- 
- 8. [NORMAN] Submit the Affymetrix data and clinical information to GEO; ask GEO folks if they want us to append the RNA-Seq FPKM as a supplementary file or if they prefer we create a new series for the RNA-Seq FPKM
- 	-->> DONE
-
- 9.  Optional analyses: association of gene and isoform FPKMs with subtypes and survival -> not enough data
- 
- 10. [NORMAN] Retrieve and analyze TCGA data
- 
- 11. [BEN] Add EndoPredict, and PAM50/ROR-S to the list of signatures
-   -->> DONE
-   
- 12. [BEN] Add signature from Ignatiadis et al, JCO, 2012: "CIN70", "IRMODULE", "RAS", "MAPK", "PTEN", "AKTmTOR", "IGF1", "SRC", "MYC", "E2F3", and "BetaCatenin"
-   -->> DONE
-   
-  13. Encode Her2 status as negative=0/1 and positive=3, NA=2
- 
- 
- 
+http://www.biomedcentral.com/1471-2164/15/1008
